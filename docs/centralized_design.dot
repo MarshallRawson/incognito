@@ -1,0 +1,20 @@
+digraph G
+{
+
+  subgraph cluster_0
+  {
+    front_end[label="Front End Process"];
+    back_end[label="Back End Process"];
+    front_end -> back_end[label="pipe"];
+    back_end -> front_end[label="pipe"];
+    label = "User Machine";
+  }
+
+  subgraph cluster_1
+  {
+    server[label="Server Process"]
+    back_end -> server[label="Encryped TCP (over network)"];
+    server -> back_end[label="Encryped TCP (over network)"];
+    label = "Server Machine";
+  }
+}
