@@ -5,6 +5,9 @@ digraph G
   {
     front_end[label="Front End Process"];
     back_end[label="Back End Process"];
+    client_launch[label="Client Launch"];
+    client_launch -> front_end[label="start"];
+    client_launch -> back_end[label="start"];
     front_end -> back_end[label="pipe"];
     back_end -> front_end[label="pipe"];
     label = "User Machine";
