@@ -11,6 +11,9 @@ An open source, security focused, distributed social media platform.
 
 ![](./docs/centralized_design.png)
 
+#### The Client Launch's Responsibilities
+* Launch the Front End and Back End Processes with the proper pipes
+
 #### The Server Process's Responsibilities
 * Hold all of the information regarding the pages.
 * Save the Member/Page Graph.
@@ -23,7 +26,6 @@ An open source, security focused, distributed social media platform.
 
 #### The Backend Process's Responsibilities
 * Establish connection to the Server Proccess, using token to verify identity.
-* Launch the Front End Process.
 * Handle all data about a user that is not stored by the Server Process.
 * Accept requests from the Front End Process and pass them along to the Server Process.
 * Send responses to the Front End Process once it has been obtained (either from storage or the Server Process).
