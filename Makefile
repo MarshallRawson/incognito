@@ -20,7 +20,7 @@ all: build/client_launch/client_launch \
      build/block_chain/test
 
 clean:
-	rm -rf build/*/*
+	rm -rf build/*
 	make
 
 build/server/launch: \
@@ -40,6 +40,7 @@ build/client_launch/client_launch: \
   build/front_end/libfront_end.a \
   build/back_end/libback_end.a \
   build/back_end/libtcp_client.a
+	mkdir -p build/client_launch
 	$(CXX) -o build/client_launch/client_launch src/client_launch/client_launch.cpp \
     $(INCLUDES) $(FRONT_END) $(PYTHON) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL)
 
