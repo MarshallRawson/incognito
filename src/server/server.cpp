@@ -1,9 +1,9 @@
 #include "server/tcp_server.hpp"
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
-  if (argc < 2)
-  {
+  if (argc < 2) {
     perror("Usage: launch <port>");
     exit(EXIT_FAILURE);
   }

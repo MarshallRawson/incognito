@@ -1,0 +1,35 @@
+#!/bin/bash
+set -euo pipefail
+
+FIX=""
+
+if [[ $* == *--fix* ]]; then
+  FIX="True"
+fi
+
+REPO_ROOT=$(realpath $(dirname $BASH_SOURCE)/../../)
+TEST_DIR=$(realpath `dirname $BASH_SOURCE`)
+
+declare -a FILES=()
+for FILE in $(find $REPO_ROOT/include $REPO_ROOT/src -type f\
+              -regex ".*/.*\\.\\(c\\|cc\\|cpp\\|h\\|hpp\\|cxx\\|hxx\\)$")
+do
+if [ ! -z "$(clang-format --style=Mozilla --output-replacements-xml $FILE | grep '<replacement ')" ]; then
+  FILES+=( "$FILE" )
+fi
+done
+if (( ${#FILES[@]} > 0 )); then
+  echo "The C++ following files are not formatted correctly:" 
+  for FILE in "${FILES[@]}"
+  do
+    echo "- $FILE"
+    if [[ $FIX == "True" ]]; then
+      echo "formatting $FILE in place"
+      clang-format -i --style=Mozilla $FILE
+    fi
+  done
+
+
+
+  exit 1
+fi

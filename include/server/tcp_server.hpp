@@ -1,10 +1,9 @@
 #pragma once
-#include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdexcept>
+#include <sys/socket.h>
 
 #include "rsa.hpp"
-
 
 class TcpServer
 {
