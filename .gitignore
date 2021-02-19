@@ -2,11 +2,4 @@
 *.swo
 
 
-build/*.a
-build/*.o
-build/front_end/*
-build/back_end/*
-build/client_launch/*
-build/server/*
-build/rsa/*
-build/block_chain/*
+build/*

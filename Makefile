@@ -57,18 +57,21 @@ build/block_chain/test: \
 build/block_chain/libblock_chain.a: \
   include/block_chain/block_chain.hpp \
   src/block_chain/block_chain.cpp
+	mkdir -p build/block_chain
 	$(CXX) -c -o build/block_chain/block_chain.o src/block_chain/block_chain.cpp $(INCLUDES)
 	ar rcs build/block_chain/libblock_chain.a build/block_chain/block_chain.o
 
 build/page/libpage.a: \
   src/page/page.cpp \
   include/page/page.hpp
+	mkdir -p build/page
 	$(CXX) -c -o build/page/page.o src/page/page.cpp $(INCLUDES)
 	ar rcs build/page/libpage.a build/page/page.o
 
 build/rsa/librsa.a: \
   src/rsa/rsa.cpp \
   include/rsa/rsa.hpp
+	mkdir -p build/rsa
 	$(CXX) -c -o build/rsa/rsa.o src/rsa/rsa.cpp $(INCLUDES)
 	ar rcs build/rsa/librsa.a build/rsa/rsa.o
 
@@ -76,6 +79,7 @@ build/server/libtcp_server.a: \
   src/server/tcp_server.cpp \
   include/server/tcp_server.hpp \
   build/rsa/librsa.a
+	mkdir -p build/server
 	$(CXX) -c -o build/server/tcp_server.o src/server/tcp_server.cpp $(INCLUDES)
 	ar rcs build/server/libtcp_server.a build/server/tcp_server.o
 
@@ -83,12 +87,14 @@ build/back_end/libtcp_client.a: \
   src/back_end/tcp_client.cpp \
   include/back_end/tcp_client.hpp \
   build/rsa/librsa.a
+	mkdir -p build/back_end
 	$(CXX) -c -o build/back_end/tcp_client.o src/back_end/tcp_client.cpp $(INCLUDES)
 	ar rcs build/back_end/libtcp_client.a build/back_end/tcp_client.o
 
 build/front_end/libfront_end.a: \
   src/front_end/front_end.cpp \
   include/front_end/front_end.hpp
+	mkdir -p build/front_end
 	$(CXX) -c -o build/front_end/front_end.o src/front_end/front_end.cpp $(PYTHON) $(INCLUDE)
 	ar rcs build/front_end/libfront_end.a build/front_end/front_end.o
 
@@ -96,5 +102,6 @@ build/back_end/libback_end.a: \
   src/back_end/back_end.cpp \
   include/back_end/back_end.hpp \
   build/back_end/libtcp_client.a
+	mkdir -p build/back_end
 	$(CXX) -c -o build/back_end/back_end.o src/back_end/back_end.cpp $(INCLUDES)
 	ar rcs build/back_end/libback_end.a build/back_end/back_end.o
