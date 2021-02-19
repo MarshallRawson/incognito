@@ -7,6 +7,7 @@ jobs:
     steps:
       - checkout
       - run: ./scripts/system_install
+      - run: ./tests/lint/test
       - run: make
       - persist_to_workspace:
           root: ./

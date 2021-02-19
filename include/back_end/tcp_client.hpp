@@ -1,12 +1,12 @@
 #pragma once
+#include <arpa/inet.h>
 #include <iostream>
 #include <stdexcept>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
 #include <string.h>
 #include <string>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include "rsa.hpp"
 

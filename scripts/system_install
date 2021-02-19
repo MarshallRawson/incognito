@@ -9,5 +9,6 @@ sudo apt install -y \
   libpython3.8-dev \
   python3.8-dev \
   libconfig++-dev \
-  libssl-dev
+  libssl-dev \
+  clang-format
 python3.8-config --ldflags
