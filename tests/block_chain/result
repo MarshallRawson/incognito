@@ -1,7 +1,7 @@
-alice: NewBlockChain:
+alice NewBlockChain:
 initial message from Alice!
 
-alice: Post:
+alice Post:
 My first real Post!
 
 alice AddPublisher:
