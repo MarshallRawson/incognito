@@ -10,5 +10,6 @@ sudo apt install -y \
   python3.8-dev \
   libconfig++-dev \
   libssl-dev \
+  libboost-dev \
   clang-format
 python3.8-config --ldflags
