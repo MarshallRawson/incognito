@@ -11,6 +11,7 @@
 class __rsa__
 {
 public:
+  virtual ~__rsa__() = 0;
   void PubKeyAsPEMStr(std::string& _out);
   static const int num_key_bits = 2048;
   static const int padding = RSA_PKCS1_PADDING;
@@ -19,6 +20,7 @@ protected:
   __rsa__() {}
   RSA* rsa_ = nullptr;
 };
+inline __rsa__::~__rsa__() {}
 
 class DecryptionRSA : public __rsa__
 {

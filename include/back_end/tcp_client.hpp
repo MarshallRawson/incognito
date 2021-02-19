@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "rsa.hpp"
+#include "rsa/rsa.hpp"
 
 class TcpClient
 {

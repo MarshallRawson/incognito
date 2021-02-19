@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <sys/socket.h>
 
-#include "rsa.hpp"
+#include "rsa/rsa.hpp"
 
 class TcpServer
 {

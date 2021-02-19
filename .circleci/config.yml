@@ -41,6 +41,15 @@ jobs:
           at: ./
       - run: ./tests/back_end/test
 
+  block_chain:
+    docker:
+      - image: cimg/base:2021.02
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./
+      - run: ./tests/block_chain/test
+
 workflows:
   linux:
     jobs:
@@ -52,5 +61,8 @@ workflows:
           requires:
             - build
       - client_launch_usage:
+          requires:
+            - build
+      - block_chain:
           requires:
             - build

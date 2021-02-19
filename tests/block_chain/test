@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+REPO_ROOT=$(realpath $(dirname $BASH_SOURCE)/../../)
+TEST_DIR=$(realpath `dirname $BASH_SOURCE`)
+
+ACTUAL_RES=$(mktemp)
+
+$REPO_ROOT/build/block_chain/test > $ACTUAL_RES
+if diff "$ACTUAL_RES" "$TEST_DIR/result" -q ; then
+  echo "$TEST_DIR SUCCESS"
+  rm -rf $ACTUAL_RES
+  exit 0
+else
+  diff "$ACTUAL_RES" "$TEST_DIR/result" -y
+  rm -rf $ACTUAL_RES
+  exit 1
+fi

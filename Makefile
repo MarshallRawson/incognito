@@ -8,14 +8,19 @@ BACK_END= -Lbuild/back_end -lback_end
 FRONT_END= -Lbuild/front_end -lfront_end
 TCP_CLIENT= -Lbuild/back_end -ltcp_client
 TCP_SERVER= -Lbuild/server -ltcp_server
-RSA= -Lbuild -lrsa
+RSA= -Lbuild/rsa -lrsa
+PAGE=-Lbuild -lpage
+BLOCK_CHAIN=-Lbuild/block_chain -lblock_chain
 CLIENT_SESSION= -Lbuild/server -lclient_session
 CONFIGPP= -lconfig++
 
-all: build/client_launch/client_launch build/back_end/launch build/server/launch
+all: build/client_launch/client_launch \
+     build/back_end/launch \
+     build/server/launch \
+     build/block_chain/test
 
 clean:
-	rm -rf build/server/* build/front_end/* build/back_end/* build/*.a build/*.o build/client_launch/*
+	rm -rf build/*/*
 	make
 
 build/server/launch: \
@@ -44,23 +49,40 @@ build/server/libclient_session.a: \
 	$(CXX) -c -o build/server/client_session.o src/server/client_session.cpp $(INCLUDES)
 	ar rcs build/server/libclient_session.a build/server/client_session.o
 
-build/librsa.a: \
-  src/rsa.cpp \
-  include/rsa.hpp
-	$(CXX) -c -o build/rsa.o src/rsa.cpp $(INCLUDES)
-	ar rcs build/librsa.a build/rsa.o
+build/block_chain/test: \
+  src/block_chain/test.cpp \
+  build/block_chain/libblock_chain.a
+	$(CXX) -o build/block_chain/test src/block_chain/test.cpp $(INCLUDES) $(BLOCK_CHAIN)
+
+build/block_chain/libblock_chain.a: \
+  include/block_chain/block_chain.hpp \
+  src/block_chain/block_chain.cpp
+	$(CXX) -c -o build/block_chain/block_chain.o src/block_chain/block_chain.cpp $(INCLUDES)
+	ar rcs build/block_chain/libblock_chain.a build/block_chain/block_chain.o
+
+build/page/libpage.a: \
+  src/page/page.cpp \
+  include/page/page.hpp
+	$(CXX) -c -o build/page/page.o src/page/page.cpp $(INCLUDES)
+	ar rcs build/page/libpage.a build/page/page.o
+
+build/rsa/librsa.a: \
+  src/rsa/rsa.cpp \
+  include/rsa/rsa.hpp
+	$(CXX) -c -o build/rsa/rsa.o src/rsa/rsa.cpp $(INCLUDES)
+	ar rcs build/rsa/librsa.a build/rsa/rsa.o
 
 build/server/libtcp_server.a: \
   src/server/tcp_server.cpp \
   include/server/tcp_server.hpp \
-  build/librsa.a
+  build/rsa/librsa.a
 	$(CXX) -c -o build/server/tcp_server.o src/server/tcp_server.cpp $(INCLUDES)
 	ar rcs build/server/libtcp_server.a build/server/tcp_server.o
 
 build/back_end/libtcp_client.a: \
   src/back_end/tcp_client.cpp \
   include/back_end/tcp_client.hpp \
-  build/librsa.a
+  build/rsa/librsa.a
 	$(CXX) -c -o build/back_end/tcp_client.o src/back_end/tcp_client.cpp $(INCLUDES)
 	ar rcs build/back_end/libtcp_client.a build/back_end/tcp_client.o
 

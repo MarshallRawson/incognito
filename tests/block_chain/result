@@ -1,0 +1,18 @@
+alice: NewBlockChain:
+initial message from Alice!
+
+alice: Post:
+My first real Post!
+
+alice AddPublisher:
+15 bob
+
+bob Post:
+My first Post!
+
+bob ChangeAuthor:
+xXb0bXx37
+
+xXb0bXx37 Post:
+Im pickel RICK!
+
