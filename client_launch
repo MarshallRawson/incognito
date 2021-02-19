@@ -1,6 +1,0 @@
-#!/bin/bash
-set -euo pipefail
-
-REPO_ROOT=$(realpath `dirname $BASH_SOURCE`)
-
-$REPO_ROOT/build/client_launch/client_launch $REPO_ROOT/src/front_end/front_end.py
