@@ -17,7 +17,8 @@ CONFIGPP= -lconfig++
 all: build/client_launch/client_launch \
      build/back_end/launch \
      build/server/launch \
-     build/block_chain/test
+     build/block_chain/test \
+     build/rsa/test
 
 test:
 	make
@@ -25,6 +26,7 @@ test:
 	./tests/block_chain/test
 	./tests/client_launch/usage/test
 	./tests/front_end/test
+	./tests/rsa/test
 	./tests/lint/test
 
 clean:
@@ -76,6 +78,11 @@ build/page/libpage.a: \
 	mkdir -p build/page
 	$(CXX) -c -o build/page/page.o src/page/page.cpp $(INCLUDES)
 	ar rcs build/page/libpage.a build/page/page.o
+
+build/rsa/test: \
+  src/rsa/test.cpp \
+  build/rsa/librsa.a
+	$(CXX) -o build/rsa/test src/rsa/test.cpp $(INCLUDES) $(RSA) $(OPENSSL)
 
 build/rsa/librsa.a: \
   src/rsa/rsa.cpp \

@@ -1,5 +1,7 @@
 #include "rsa/rsa.hpp"
 
+#include <iostream>
+
 void
 __rsa__::PubKeyAsPEMStr(std::string& _out)
 {
@@ -15,6 +17,14 @@ __rsa__::PubKeyAsPEMStr(std::string& _out)
   while (!feof(read_pipe))
     _out.push_back(getc(read_pipe));
   fclose(read_pipe);
+}
+
+int
+__rsa__::Size()
+{
+  if (rsa_ == nullptr)
+    throw std::runtime_error("RSA not set\n");
+  return RSA_size(rsa_);
 }
 
 DecryptionRSA::DecryptionRSA()
@@ -35,15 +45,16 @@ DecryptionRSA::~DecryptionRSA()
   BN_free(bn_);
 }
 
-void
-DecryptionRSA::Decrypt(int _flen,
-                       unsigned char* _encrypted,
-                       unsigned char* _out)
+std::string
+DecryptionRSA::Decrypt(const std::vector<unsigned char>& _encrypted)
 {
-  if (RSA_private_decrypt(_flen, _encrypted, _out, rsa_, __rsa__::padding) <
-      0) {
+  unsigned char out[Size()] = {};
+  if (RSA_private_decrypt(
+        Size(), &(_encrypted[0]), out, rsa_, __rsa__::padding) < 0) {
     throw std::runtime_error("Error decrypting");
   }
+  // it would be cool is we did not have to copy the data just to return it.
+  return std::string((char*)out);
 }
 
 EncryptionRSA::EncryptionRSA(RSA* _rsa)
@@ -78,27 +89,25 @@ EncryptionRSA::FromPEMStr(const char* _pem)
   SetRSA(rsa);
 }
 
-void
-EncryptionRSA::Encrypt(int _msg_len, unsigned char* _msg, unsigned char* _out)
+std::vector<unsigned char>
+EncryptionRSA::Encrypt(const std::string& _msg)
 {
+  std::vector<unsigned char> out(Size());
   if (rsa_ == nullptr)
     throw std::runtime_error("RSA not set\n");
-  int e = RSA_public_encrypt(_msg_len, _msg, _out, rsa_, __rsa__::padding);
+  int e = RSA_public_encrypt(_msg.length(),
+                             (const unsigned char*)_msg.c_str(),
+                             &(out[0]),
+                             rsa_,
+                             __rsa__::padding);
   if (e != RSA_size(rsa_)) {
     throw std::runtime_error("Error encrypting");
   }
+  return out;
 }
 
 EncryptionRSA::~EncryptionRSA()
 {
   if (rsa_ != nullptr)
     RSA_free(rsa_);
-}
-
-int
-EncryptionRSA::EncryptMsgSize()
-{
-  if (rsa_ == nullptr)
-    throw std::runtime_error("RSA not set\n");
-  return RSA_size(rsa_);
 }

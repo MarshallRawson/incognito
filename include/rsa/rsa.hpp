@@ -3,6 +3,7 @@
 #include <string.h>
 #include <string>
 #include <unistd.h>
+#include <vector>
 
 #include <openssl/pem.h>
 #include <openssl/rand.h>
@@ -15,6 +16,7 @@ public:
   void PubKeyAsPEMStr(std::string& _out);
   static const int num_key_bits = 2048;
   static const int padding = RSA_PKCS1_PADDING;
+  int Size();
 
 protected:
   __rsa__() {}
@@ -27,7 +29,7 @@ class DecryptionRSA : public __rsa__
 public:
   DecryptionRSA();
   ~DecryptionRSA();
-  void Decrypt(int _flen, unsigned char* _encrypted, unsigned char* _out);
+  std::string Decrypt(const std::vector<unsigned char>& _encryted);
 
 private:
   BIGNUM* bn_ = nullptr;
@@ -41,8 +43,7 @@ public:
   ~EncryptionRSA();
   EncryptionRSA(RSA* _rsa);
   EncryptionRSA();
-  void Encrypt(int _msg_len, unsigned char* _msg, unsigned char* _out);
-  int EncryptMsgSize();
+  std::vector<unsigned char> Encrypt(const std::string& _msg);
 
 private:
   void SetRSA(RSA* _rsa);
