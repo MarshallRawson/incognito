@@ -4,11 +4,4 @@ class Page
 {
 public:
   Page();
-
-
-
-
-
-
-
 };

@@ -1,9 +1,3 @@
 #include "page.hpp"
 
-Page::Page()
-{
-}
-
-
-
-
+Page::Page() {}

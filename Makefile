@@ -25,6 +25,7 @@ test:
 	./tests/block_chain/test
 	./tests/client_launch/usage/test
 	./tests/front_end/test
+	./tests/lint/test
 
 clean:
 	rm -rf build/*
