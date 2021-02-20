@@ -35,7 +35,6 @@ TcpServer::Launch()
   while (true) {
     int conn_fd =
       accept(sock_fd_, (struct sockaddr*)&address_, (socklen_t*)&addrlen_);
-    // TODO: make sure that the PubKey is PEM string
     ClientSession cs(conn_fd);
     cs.Launch();
   }
