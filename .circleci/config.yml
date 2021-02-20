@@ -41,6 +41,15 @@ jobs:
           at: ./
       - run: ./tests/back_end/test
 
+  rsa:
+    docker:
+      - image: cimg/base:2021.02
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./
+      - run: ./tests/rsa/test
+
   block_chain:
     docker:
       - image: cimg/base:2021.02
@@ -64,5 +73,8 @@ workflows:
           requires:
             - build
       - block_chain:
+          requires:
+            - build
+      - rsa:
           requires:
             - build
