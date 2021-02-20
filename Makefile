@@ -19,6 +19,13 @@ all: build/client_launch/client_launch \
      build/server/launch \
      build/block_chain/test
 
+test:
+	make
+	./tests/back_end/test
+	./tests/block_chain/test
+	./tests/client_launch/usage/test
+	./tests/front_end/test
+
 clean:
 	rm -rf build/*
 	make

@@ -232,7 +232,6 @@ BlockChain::AddBlockRet BlockChain::AddBlock(const Block& _block, const uint64_t
   return Success;
 }
 
-
 uint64_t BlockChain::LastHash() const
 {
   return chain_.back().hash_;
@@ -245,6 +244,7 @@ void BlockChain::LastMsg(std::string& _out) const
 
 void BlockChain::LastMsgs(std::vector<std::string>& _out, int n) const
 {
+  _out.reserve(n);
   auto it = chain_.rbegin();
   for (int i = 0; i < n; ++i)
   {
@@ -259,6 +259,7 @@ void BlockChain::LastMsgs(std::vector<std::string>& _out, int n) const
 
 void BlockChain::AllMsgs(std::vector<std::string>& _out) const
 {
+  _out.reserve(chain_.size());
   for (auto it = chain_.rbegin(); it != chain_.rend(); ++it)
   {
     _out.insert(_out.begin(), "");
@@ -285,7 +286,6 @@ void BlockChain::LastBlocks(std::vector<Block>& _out, int n) const
       ++it;
   }
 }
-
 
 void BlockChain::GetChain(std::list<Block>& _out)
 {
