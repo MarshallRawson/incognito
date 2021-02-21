@@ -1,0 +1,8 @@
+#!/bin/bash
+if [ "$(uname)" == "Darwin" ]; then
+  # this is a mac
+  echo "-I/usr/local/Cellar/openssl \"
+else
+  #this is a debian linux
+  echo "-I/usr/include/openssl \"
+fi

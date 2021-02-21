@@ -14,7 +14,7 @@ if [ "$(uname)" == "Darwin" ]; then
     libssl-dev \
     clang-format
 else
-  # this is a linux machine
+  # this is a debian linux machine
   sudo add-apt-repository -y ppa:deadsnakes/ppa
   sudo apt update
   sudo apt install -y \
@@ -26,5 +26,8 @@ else
     libconfig++-dev \
     libssl-dev \
     clang-format
+
+  # lib p2p dependencies
+  sudo pip3 install cmake --upgrade
 fi
 python3.8-config --ldflags

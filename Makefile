@@ -1,10 +1,12 @@
 CXX= g++ -std=gnu++17 -g -Wall
 C= gcc
-PYTHON_LIBS= $$(python3.8-config --ldflags --embed)
 PYTHON_INCLUDES= $$(python3.8-config --includes --embed)
+PYTHON_LIBS= $$(python3.8-config --ldflags --embed)
+
+OPENSSL_INCLUDES= $$(./scripts/openssl_include_dir)
+OPENSSL_LIBS= -lssl -lcrypto
 
 
-OPENSSL= -I/usr/include/openssl -lssl -lcrypto
 INCLUDES= -I/usr/include -Iinclude
 BACK_END= -Lbuild/back_end -lback_end
 FRONT_END= -Lbuild/front_end -lfront_end
@@ -39,13 +41,13 @@ build/server/launch: \
   src/server/server.cpp \
   build/server/libtcp_server.a \
   build/server/libclient_session.a
-	$(CXX) -o build/server/launch src/server/server.cpp $(INCLUDES) $(TCP_SERVER) $(RSA) $(OPENSSL) $(CLIENT_SESSION)
+	$(CXX) -o build/server/launch src/server/server.cpp $(INCLUDES) $(TCP_SERVER) $(RSA) $(OPENSSL_INCLUDES) $(OPENSSL_LIBS) $(CLIENT_SESSION)
 
 build/back_end/launch: \
   src/back_end/launch.cpp \
   build/back_end/libback_end.a \
   build/back_end/libtcp_client.a
-	$(CXX) -o build/back_end/launch src/back_end/launch.cpp $(INCLUDES) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL)
+	$(CXX) -o build/back_end/launch src/back_end/launch.cpp $(INCLUDES) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL_INCLUDES) $(OPENSSL_LIBS)
 
 build/client_launch/client_launch: \
   src/client_launch/client_launch.cpp \
@@ -54,8 +56,7 @@ build/client_launch/client_launch: \
   build/back_end/libtcp_client.a
 	mkdir -p build/client_launch
 	$(CXX) -o build/client_launch/client_launch src/client_launch/client_launch.cpp \
-    $(INCLUDES) $(FRONT_END) $(PYTHON_INCLUDES) $(PYTHON_LIBS) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL)
-
+    $(INCLUDES) $(FRONT_END) $(PYTHON_INCLUDES) $(PYTHON_LIBS) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL_INCLUDES) $(OPENSSL_LIBS)
 build/server/libclient_session.a: \
   src/server/client_session.cpp \
   include/server/client_session.hpp
@@ -84,8 +85,7 @@ build/page/libpage.a: \
 build/rsa/test: \
   src/rsa/test.cpp \
   build/rsa/librsa.a
-	$(CXX) -o build/rsa/test src/rsa/test.cpp $(INCLUDES) $(RSA) $(OPENSSL)
-
+	$(CXX) -o build/rsa/test src/rsa/test.cpp $(INCLUDES) $(RSA) $(OPENSSL_INCLUDES) $(OPENSSL_LIBS)
 build/rsa/librsa.a: \
   src/rsa/rsa.cpp \
   include/rsa/rsa.hpp
