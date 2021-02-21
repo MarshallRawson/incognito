@@ -12,7 +12,6 @@ jobs:
           root: ./
           paths:
             - ./
-
   lint:
     docker:
       - image: cimg/base:2021.02
@@ -69,7 +68,9 @@ workflows:
   linux:
     jobs:
       - build
-      - lint
+      - lint:
+          requires:
+            - build
       - front_end:
           requires:
             - build
