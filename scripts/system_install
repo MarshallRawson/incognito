@@ -20,6 +20,7 @@ else
     python3.8 \
     libpython3.8-dev \
     python3.8-dev \
+    python3-pip \
     libconfig++-dev \
     libssl-dev \
     clang-format
