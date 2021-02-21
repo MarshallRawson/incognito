@@ -6,10 +6,6 @@
 #include <string>
 #include <unistd.h>
 
-#include <openssl/md5.h>
-
-#include <libconfig.h++>
-
 #include "back_end/tcp_client.hpp"
 
 class BackEnd
