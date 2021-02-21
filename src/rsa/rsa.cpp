@@ -48,13 +48,13 @@ DecryptionRSA::~DecryptionRSA()
 std::string
 DecryptionRSA::Decrypt(const std::vector<unsigned char>& _encrypted)
 {
-  unsigned char out[Size()] = {};
+  std::vector<unsigned char> out(Size());
   if (RSA_private_decrypt(
-        Size(), &(_encrypted[0]), out, rsa_, __rsa__::padding) < 0) {
+        Size(), &(_encrypted[0]), &(out[0]), rsa_, __rsa__::padding) < 0) {
     throw std::runtime_error("Error decrypting");
   }
   // it would be cool is we did not have to copy the data just to return it.
-  return std::string((char*)out);
+  return std::string((char*)(&(out[0])));
 }
 
 EncryptionRSA::EncryptionRSA(RSA* _rsa)
