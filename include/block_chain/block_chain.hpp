@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utils/utils.hpp"
 #include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <iostream>
@@ -10,25 +11,9 @@
 #include <stdexcept>
 #include <stdint.h>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
-class __block_chain__
-{
-public:
-  virtual ~__block_chain__() = 0;
-
-protected:
-  template<typename T>
-  static uint64_t Hash(const T& t)
-  {
-    // TODO make this a real templated hash
-    return std::hash<T>{}(t);
-  }
-};
-inline __block_chain__::~__block_chain__() {}
-
-struct Block : protected __block_chain__
+struct Block
 {
   enum class Action
   {
@@ -62,7 +47,7 @@ struct Block : protected __block_chain__
   Action action_;
 };
 
-class BlockChain : protected __block_chain__
+class BlockChain
 {
 public:
   BlockChain();

@@ -1,4 +1,4 @@
-CXX= g++ -std=gnu++17 -g -Wall
+CXX= g++-7 -std=gnu++17 -g -Wall
 C= gcc
 PYTHON_INCLUDES= $$(python3.8-config --includes --embed)
 PYTHON_LIBS= $$(python3.8-config --ldflags --embed)
@@ -13,16 +13,19 @@ FRONT_END= -Lbuild/front_end -lfront_end
 TCP_CLIENT= -Lbuild/back_end -ltcp_client
 TCP_SERVER= -Lbuild/server -ltcp_server
 RSA= -Lbuild/rsa -lrsa
+UTILS= -Lbuild/utils -lutils
 PAGE=-Lbuild -lpage
 BLOCK_CHAIN=-Lbuild/block_chain -lblock_chain
 CLIENT_SESSION= -Lbuild/server -lclient_session
+CLIENT_COM_MAP= -Lbuild/server -lclient_com_map
 CONFIGPP= -lconfig++
 
 all: build/client_launch/client_launch \
      build/back_end/launch \
      build/server/launch \
      build/block_chain/test \
-     build/rsa/test
+     build/rsa/test \
+     build/server/client_com_map_test
 
 test:
 	make
@@ -57,20 +60,16 @@ build/client_launch/client_launch: \
 	mkdir -p build/client_launch
 	$(CXX) -o build/client_launch/client_launch src/client_launch/client_launch.cpp \
     $(INCLUDES) $(FRONT_END) $(PYTHON_INCLUDES) $(PYTHON_LIBS) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL_INCLUDES) $(OPENSSL_LIBS)
-build/server/libclient_session.a: \
-  src/server/client_session.cpp \
-  include/server/client_session.hpp
-	$(CXX) -c -o build/server/client_session.o src/server/client_session.cpp $(INCLUDES)
-	ar rcs build/server/libclient_session.a build/server/client_session.o
 
 build/block_chain/test: \
   src/block_chain/test.cpp \
   build/block_chain/libblock_chain.a
-	$(CXX) -o build/block_chain/test src/block_chain/test.cpp $(INCLUDES) $(BLOCK_CHAIN)
+	$(CXX) -o build/block_chain/test src/block_chain/test.cpp $(INCLUDES) $(BLOCK_CHAIN) $(UTILS)
 
 build/block_chain/libblock_chain.a: \
   include/block_chain/block_chain.hpp \
-  src/block_chain/block_chain.cpp
+  src/block_chain/block_chain.cpp \
+  build/utils/libutils.a
 	mkdir -p build/block_chain
 	$(CXX) -c -o build/block_chain/block_chain.o src/block_chain/block_chain.cpp $(INCLUDES)
 	ar rcs build/block_chain/libblock_chain.a build/block_chain/block_chain.o
@@ -93,6 +92,32 @@ build/rsa/librsa.a: \
 	mkdir -p build/rsa
 	$(CXX) -c -o build/rsa/rsa.o src/rsa/rsa.cpp $(INCLUDES) $(OPENSSL_INCLUDES)
 	ar rcs build/rsa/librsa.a build/rsa/rsa.o
+
+build/utils/libutils.a: \
+  src/utils/utils.cpp \
+  include/utils/utils.hpp
+	mkdir -p build/utils
+	$(CXX) -c -o build/utils/utils.o src/utils/utils.cpp $(INCLUDES)
+	ar rcs build/utils/libutils.a build/utils/utils.o
+
+build/server/libclient_session.a: \
+  src/server/client_session.cpp \
+  include/server/client_session.hpp
+	$(CXX) -c -o build/server/client_session.o src/server/client_session.cpp $(INCLUDES)
+	ar rcs build/server/libclient_session.a build/server/client_session.o
+
+build/server/client_com_map_test: \
+  src/server/client_com_map_test.cpp \
+  build/server/libclient_com_map.a
+	$(CXX) -o build/server/client_com_map_test src/server/client_com_map_test.cpp $(INCLUDES) \
+  $(CLIENT_COM_MAP)
+
+build/server/libclient_com_map.a: \
+  src/server/client_com_map.cpp \
+  include/server/client_com_map.hpp
+	mkdir -p build/server
+	$(CXX) -c -o build/server/client_com_map.o src/server/client_com_map.cpp $(INCLUDES)
+	ar rcs build/server/libclient_com_map.a build/server/client_com_map.o
 
 build/server/libtcp_server.a: \
   src/server/tcp_server.cpp \

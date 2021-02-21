@@ -9,8 +9,8 @@ Block::Block(const std::string& _msg,
   , author_(_author)
   , action_(_action)
 {
-  hash_ = Hash<std::string>(msg_ + std::to_string(_prev_hash) + author_ +
-                            ActionToString(action_));
+  hash_ = incognito_utils::Hash<std::string>(msg_ + std::to_string(_prev_hash) +
+                                             author_ + ActionToString(action_));
 }
 
 std::string
@@ -148,7 +148,7 @@ BlockChain::New(const std::string& _init_msg,
 BlockChain::AddBlockRet
 BlockChain::AddBlock(const Block& _block, const uint64_t& _publisher)
 {
-  uint64_t p_hash = Hash<uint64_t>(_publisher);
+  uint64_t p_hash = incognito_utils::Hash<uint64_t>(_publisher);
   // genesis block handling
   if (chain_.size() == 0 && _block.action_ == Block::Action::NewBlockChain) {
     publishers_.insert(p_hash);
@@ -191,7 +191,7 @@ BlockChain::AddBlock(const Block& _block, const uint64_t& _publisher)
       }
       chain_.push_back(_block);
 
-      uint64_t new_pub_hash = Hash<uint64_t>(new_pub);
+      uint64_t new_pub_hash = incognito_utils::Hash<uint64_t>(new_pub);
 
       std::string new_author = _block.msg_.substr(_block.msg_.find(" ") + 1);
       publishers_.insert(new_pub_hash);
