@@ -1,6 +1,8 @@
 CXX= g++ -std=gnu++17 -g -Wall
 C= gcc
-PYTHON= -Iinclude -I/usr/include/python3.8 -L/usr/lib/python3.8/config-3.8-x86_64-linux-gnu -L/usr/lib  -lcrypt -lpthread -ldl  -lutil -lm -lm -lpython3.8
+PYTHON_LIBS= $$(python3.8-config --ldflags --embed)
+PYTHON_INCLUDES= $$(python3.8-config --includes --embed)
+
 
 OPENSSL= -I/usr/include/openssl -lssl -lcrypto
 INCLUDES= -I/usr/include -Iinclude
@@ -52,7 +54,7 @@ build/client_launch/client_launch: \
   build/back_end/libtcp_client.a
 	mkdir -p build/client_launch
 	$(CXX) -o build/client_launch/client_launch src/client_launch/client_launch.cpp \
-    $(INCLUDES) $(FRONT_END) $(PYTHON) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL)
+    $(INCLUDES) $(FRONT_END) $(PYTHON_INCLUDES) $(PYTHON_LIBS) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL)
 
 build/server/libclient_session.a: \
   src/server/client_session.cpp \
@@ -111,7 +113,7 @@ build/front_end/libfront_end.a: \
   src/front_end/front_end.cpp \
   include/front_end/front_end.hpp
 	mkdir -p build/front_end
-	$(CXX) -c -o build/front_end/front_end.o src/front_end/front_end.cpp $(PYTHON) $(INCLUDE)
+	$(CXX) -c -o build/front_end/front_end.o src/front_end/front_end.cpp $(PYTHON_INCLUDES) $(PYTHON_LIBS) $(INCLUDES)
 	ar rcs build/front_end/libfront_end.a build/front_end/front_end.o
 
 build/back_end/libback_end.a: \
