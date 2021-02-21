@@ -14,7 +14,7 @@ declare -a FILES=()
 for FILE in $(find $REPO_ROOT/include $REPO_ROOT/src -type f\
               -regex ".*/.*\\.\\(c\\|cc\\|cpp\\|h\\|hpp\\|cxx\\|hxx\\)$")
 do
-if [ ! -z "$(clang-format --style=Mozilla --output-replacements-xml $FILE | grep '<replacement ')" ]; then
+if [ ! -z "$(clang-format-6.0 --style=Mozilla --output-replacements-xml $FILE | grep '<replacement ')" ]; then
   FILES+=( "$FILE" )
 fi
 done
