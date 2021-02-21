@@ -4,14 +4,11 @@ if [ "$(uname)" == "Darwin" ]; then
   # this is a machintosh machine
   brew tap drolando/homebrew-deadsnakes
   brew update
-  brew install -y
+  brew install \
     make \
-    g++ \
-    python3.8 \
-    libpython3.8-dev \
-    python3.8-dev \
-    libconfig++-dev \
-    libssl-dev \
+    gcc \
+    python@3.8 \
+    openssl \
     clang-format
 else
   # this is a debian linux machine
