@@ -1,15 +1,30 @@
 #!/bin/bash
 set -euo pipefail
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt update
-sudo apt install -y \
-  make \
-  g++ \
-  python3.8 \
-  libpython3.8-dev \
-  python3.8-dev \
-  libconfig++-dev \
-  libssl-dev \
-  libboost-dev \
-  clang-format
+if [ "$(uname)" == "Darwin" ]; then
+  # this is a machintosh machine
+  brew tap drolando/homebrew-deadsnakes
+  brew update
+  brew install -y
+    make \
+    g++ \
+    python3.8 \
+    libpython3.8-dev \
+    python3.8-dev \
+    libconfig++-dev \
+    libssl-dev \
+    clang-format
+else
+  # this is a linux machine
+  sudo add-apt-repository -y ppa:deadsnakes/ppa
+  sudo apt update
+  sudo apt install -y \
+    make \
+    g++ \
+    python3.8 \
+    libpython3.8-dev \
+    python3.8-dev \
+    libconfig++-dev \
+    libssl-dev \
+    clang-format
+fi
 python3.8-config --ldflags
