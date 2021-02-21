@@ -25,7 +25,7 @@ if (( ${#FILES[@]} > 0 )); then
     echo "- $FILE"
     if [[ $FIX == "True" ]]; then
       echo "formatting $FILE in place"
-      clang-format -i --style=Mozilla $FILE
+      clang-format-6.0 -i --style=Mozilla $FILE
     fi
   done
 

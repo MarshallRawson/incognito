@@ -23,7 +23,7 @@ else
     python3-pip \
     libconfig++-dev \
     libssl-dev \
-    clang-format \
+    clang-format-6.0 \
     libboost-dev
 
   # lib p2p dependencies
