@@ -19,6 +19,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: ./
+      - run: ./scripts/system_install
       - run: ./tests/lint/test
 
   client_launch_usage:
