@@ -7,12 +7,18 @@ jobs:
     steps:
       - checkout
       - run: ./scripts/system_install
-      - run: ./tests/lint/test
       - run: make
       - persist_to_workspace:
           root: ./
           paths:
             - ./
+
+  lint:
+    docker:
+      - image: cimg/base:2021.02
+    steps:
+      - checkout
+      - run: ./tests/lint/test
 
   client_launch_usage:
     docker:
@@ -63,6 +69,7 @@ workflows:
   linux:
     jobs:
       - build
+      - lint
       - front_end:
           requires:
             - build
