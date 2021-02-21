@@ -20,13 +20,9 @@ else
     python3.8 \
     libpython3.8-dev \
     python3.8-dev \
-    python3-pip \
     libconfig++-dev \
     libssl-dev \
     clang-format-6.0 \
     libboost-dev
-
-  # lib p2p dependencies
-  sudo pip3 install cmake --upgrade
 fi
 python3.8-config --ldflags

@@ -1,3 +1,0 @@
-[submodule "libp2p"]
-	path = libp2p
-	url = https://github.com/soramitsu/libp2p.git
