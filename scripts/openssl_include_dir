@@ -1,7 +1,7 @@
 #!/bin/bash
 if [ "$(uname)" == "Darwin" ]; then
   # this is a mac
-  echo "-I/usr/local/Cellar/openssl/openssl/1.0.2r/include "
+  echo "-I/usr/local/Cellar/openssl@1.1/1.1.1j/include "
 else
   #this is a debian linux
   echo "-I/usr/include/openssl "
