@@ -41,13 +41,13 @@ build/server/launch: \
   src/server/server.cpp \
   build/server/libtcp_server.a \
   build/server/libclient_session.a
-	$(CXX) -o build/server/launch src/server/server.cpp $(INCLUDES) $(TCP_SERVER) $(RSA) $(OPENSSL_INCLUDES) $(OPENSSL_LIBS) $(CLIENT_SESSION)
+	$(CXX) -o build/server/launch src/server/server.cpp $(INCLUDES) $(TCP_SERVER) $(RSA) $(OPENSSL_LIBS) $(CLIENT_SESSION)
 
 build/back_end/launch: \
   src/back_end/launch.cpp \
   build/back_end/libback_end.a \
   build/back_end/libtcp_client.a
-	$(CXX) -o build/back_end/launch src/back_end/launch.cpp $(INCLUDES) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL_INCLUDES) $(OPENSSL_LIBS)
+	$(CXX) -o build/back_end/launch src/back_end/launch.cpp $(INCLUDES) $(BACK_END) $(TCP_CLIENT) $(RSA) $(OPENSSL_LIBS)
 
 build/client_launch/client_launch: \
   src/client_launch/client_launch.cpp \
@@ -85,12 +85,13 @@ build/page/libpage.a: \
 build/rsa/test: \
   src/rsa/test.cpp \
   build/rsa/librsa.a
-	$(CXX) -o build/rsa/test src/rsa/test.cpp $(INCLUDES) $(RSA) $(OPENSSL_INCLUDES) $(OPENSSL_LIBS)
+	$(CXX) -o build/rsa/test src/rsa/test.cpp $(INCLUDES) $(RSA) $(OPENSSL_LIBS)
+
 build/rsa/librsa.a: \
   src/rsa/rsa.cpp \
   include/rsa/rsa.hpp
 	mkdir -p build/rsa
-	$(CXX) -c -o build/rsa/rsa.o src/rsa/rsa.cpp $(INCLUDES)
+	$(CXX) -c -o build/rsa/rsa.o src/rsa/rsa.cpp $(INCLUDES) $(OPENSSL_INCLUDES)
 	ar rcs build/rsa/librsa.a build/rsa/rsa.o
 
 build/server/libtcp_server.a: \
@@ -113,7 +114,7 @@ build/front_end/libfront_end.a: \
   src/front_end/front_end.cpp \
   include/front_end/front_end.hpp
 	mkdir -p build/front_end
-	$(CXX) -c -o build/front_end/front_end.o src/front_end/front_end.cpp $(PYTHON_INCLUDES) $(PYTHON_LIBS) $(INCLUDES)
+	$(CXX) -c -o build/front_end/front_end.o src/front_end/front_end.cpp $(PYTHON_INCLUDES) $(INCLUDES)
 	ar rcs build/front_end/libfront_end.a build/front_end/front_end.o
 
 build/back_end/libback_end.a: \
