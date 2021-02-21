@@ -23,7 +23,8 @@ else
     python3-pip \
     libconfig++-dev \
     libssl-dev \
-    clang-format
+    clang-format \
+    libboost-dev
 
   # lib p2p dependencies
   sudo pip3 install cmake --upgrade
