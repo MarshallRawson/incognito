@@ -2,166 +2,159 @@ package block_chain
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"testing"
 )
 
 // Testing the block chain
-
 func TestBlockChain(t *testing.T) {
 	// Alice constructs her block chain
-	bc := New(Self{Id: peer.ID([]byte{3, 7}), Name: "alice"})
+	bc := New(Self{ID: peer.ID([]byte{3, 7}), Name: "alice"})
 	// Alice makes her own block chain
-	bc.Genesis("Alice's page")
+	err := bc.Genesis("Alice's page")
+	if err != nil {
+		panic(err)
+	}
+
 	// Alice makes a post on her block chain
-	bc.Post("Hello World!")
+	err = bc.Post("Hello World!")
+	if err != nil {
+		panic(err)
+	}
 
 	// Alice meets a person named bob
-	bob_chain := New(Self{Id: peer.ID([]byte{7, 3}), Name: "bob"})
+	bob_chain := New(Self{ID: peer.ID([]byte{7, 3}), Name: "bob"})
 
-	bob_puzzle := bob_chain.SharePubPuzzle()
 	// Alice acquires a publisher puzzle from Bob, which bob knows how to solve, but Alice does not
+	bob_puzzle := bob_chain.SharePubPuzzle()
 
 	// Alice gets bob's public puzzle and makes a bock which adds bob as a publisher
-	bc.AddPub(bob_puzzle, "bob")
+	err = bc.AddPublisher(bob_puzzle, "bob")
+	if err != nil {
+		panic(err)
+	}
 
 	// Alice makes a post
-	bc.Post("I added Bob")
+	err = bc.Post("I added Bob")
+	if err != nil {
+		panic(err)
+	}
 
 	// Bob Shares with Alice his peerID, and Alice adds him as a verifier
 	// so he will recive updates
-	bc.AddVer(bob_chain.ShareId())
+	err = bc.AddNode(bob_chain.ShareId())
+	if err != nil {
+		panic(err)
+	}
 
 	// Alice changes her name from "alice" to "Alice"
-	bc.NameChange("Alice")
+	err = bc.ChangeName("Alice")
+	if err != nil {
+		panic(err)
+	}
 
-	// TODO
 	// check the blocks are valid
 	chain := bc.ShareChain()
 	b := chain.Front()
 
-	gen := b.Value.(Block)
-	g_ex, err := gen.FromGenesis()
-	if err != nil {
-		panic(err)
+	gen := b.Value.(*Genesis)
+	if gen.action != genesis {
+		t.Errorf("Expected Action %s, but got %s", genesis, gen.action)
 	}
-	if gen.Action != Genesis {
-		t.Errorf("Expected Action %s, but got %s", "Genesis", gen.Action)
+	if gen.name != "alice" {
+		t.Errorf("Expected Name %s, but got %s", "alice", gen.name)
 	}
-	if gen.Name != "alice" {
-		t.Errorf("Expected Name %s, but got %s", "alice", gen.Name)
+	if gen.title != "Alice's page" {
+		t.Errorf("Expected Title %s, but got %s", "Alice's page", gen.name)
 	}
-	if g_ex.Title != "Alice's page" {
-		t.Errorf("Expected Title %s, but got %s", "Alice's page", gen.Name)
+	if gen.nodeID != peer.ID([]byte{3, 7}) {
+		t.Errorf("Expected Ver %x, but got %x", peer.ID([]byte{3, 7}), gen.nodeID)
 	}
-	if g_ex.Ver != peer.ID([]byte{3, 7}) {
-		t.Errorf("Expected Ver %x, but got %x", peer.ID([]byte{3, 7}), g_ex.Ver)
-	}
-	hash := gen.Hash
+	hash := gen.hash
 	b = b.Next()
 
-	post := b.Value.(Block)
-	post_ex, err := post.FromPost()
-	if err != nil {
-		panic(err)
+	p := b.Value.(*Post)
+	if p.action != post {
+		t.Errorf("Expected Action %s, but got %s", post, p.action)
 	}
-	if post.Action != Post {
-		t.Errorf("Expected Action %s, but got %s", "Post", post.Action)
+	if p.name != "alice" {
+		t.Errorf("Expected Name %s, but got %s", "alice", p.name)
 	}
-	if post.Name != "alice" {
-		t.Errorf("Expected Name %s, but got %s", "alice", post.Name)
+	if p.msg != "Hello World!" {
+		t.Errorf("Expected  %s, but got %s", "Hello World!", p.msg)
 	}
-	if post_ex != "Hello World!" {
-		t.Errorf("Expected  %s, but got %s", "Hello World!", post_ex)
+	if p.prevHash != hash {
+		t.Errorf("Expected  PrevHash %x, but got %x", hash, p.prevHash)
 	}
-	if post.PrevHash != hash {
-		t.Errorf("Expected  PrevHash %x, but got %x", hash, post.PrevHash)
-	}
-	hash = post.Hash
+	hash = p.hash
 	b = b.Next()
 
-	pub := b.Value.(Block)
-	pub_ex, err := pub.FromAddPub()
-	if err != nil {
-		panic(err)
+	pub := b.Value.(*AddPublisher)
+	if pub.action != addPublisher {
+		t.Errorf("Expected Action %s, but got %s", "AddPub", pub.action)
 	}
-	if pub.Action != AddPub {
-		t.Errorf("Expected Action %s, but got %s", "AddPub", pub.Action)
+	if pub.name != "alice" {
+		t.Errorf("Expected Name %s, but got %s", "alice", pub.name)
 	}
-	if post.Name != "alice" {
-		t.Errorf("Expected Name %s, but got %s", "alice", pub.Name)
+	if pub.newName != "bob" {
+		t.Errorf("Expected NewName %s, but got %s", "bob", pub.newName)
 	}
-	if pub_ex.NewName != "bob" {
-		t.Errorf("Expected NewName %s, but got %s", "bob", pub_ex.NewName)
+	if pub.prevHash != hash {
+		t.Errorf("Expected  PrevHash %x, but got %x", hash, pub.prevHash)
 	}
-	if pub.PrevHash != hash {
-		t.Errorf("Expected  PrevHash %x, but got %x", hash, pub.PrevHash)
+	if pub.newPublisherPuzzle != bob_chain.SharePubPuzzle() {
+		t.Errorf("Expected  pub puzzle %x, but got %x",
+			bob_chain.SharePubPuzzle(), pub.newPublisherPuzzle)
 	}
-	if pub_ex.NewPub != bob_chain.SharePubPuzzle() {
-		t.Errorf("Expected  pub puzzle %x, but got %x", bob_chain.SharePubPuzzle(), pub_ex.NewPub)
-	}
-	hash = pub.Hash
+	hash = pub.hash
 	b = b.Next()
 
-	post2 := b.Value.(Block)
-	post2_ex, err := post2.FromPost()
-	if err != nil {
-		panic(err)
+	post2 := b.Value.(*Post)
+	if post2.action != post {
+		t.Errorf("Expected Action %s, but got %s", post, post2.action)
 	}
-	if post2.Action != Post {
-		t.Errorf("Expected Action %s, but got %s", "Post", post2.Action)
+	if post2.name != "alice" {
+		t.Errorf("Expected Name %s, but got %s", "alice", post2.name)
 	}
-	if post2.Name != "alice" {
-		t.Errorf("Expected Name %s, but got %s", "alice", post2.Name)
+	if post2.msg != "I added Bob" {
+		t.Errorf("Expected  %s, but got %s", "I added Bob", post2.msg)
 	}
-	if post2_ex != "I added Bob" {
-		t.Errorf("Expected  %s, but got %s", "I added Bob", post2_ex)
+	if post2.prevHash != hash {
+		t.Errorf("Expected  PrevHash %x, but got %x", hash, post2.prevHash)
 	}
-	if post2.PrevHash != hash {
-		t.Errorf("Expected  PrevHash %x, but got %x", hash, post2.PrevHash)
-	}
-	hash = post2.Hash
+	hash = post2.hash
 	b = b.Next()
 
-	av := b.Value.(Block)
-	av_ex, err := av.FromAddVer()
-	if err != nil {
-		panic(err)
+	av := b.Value.(*AddNode)
+	if av.action != addNode {
+		t.Errorf("Expected Action %s, but got %s", addNode, av.action)
 	}
-	if av.Action != AddVer {
-		t.Errorf("Expected Action %s, but got %s", "AddVer", av.Action)
+	if av.name != "alice" {
+		t.Errorf("Expected Name %s, but got %s", "alice", av.name)
 	}
-	if av.Name != "alice" {
-		t.Errorf("Expected Name %s, but got %s", "alice", av.Name)
+	if av.newNodeID != bob_chain.ShareId() {
+		t.Errorf("Expected NewVer %x, but got %x", bob_chain.ShareId(), av.newNodeID)
 	}
-	if av_ex.NewVer != bob_chain.ShareId() {
-		t.Errorf("Expected NewVer %x, but got %x", bob_chain.ShareId(), av_ex.NewVer)
+	if av.prevHash != hash {
+		t.Errorf("Expected  PrevHash %x, but got %x", hash, av.prevHash)
 	}
-	if av.PrevHash != hash {
-		t.Errorf("Expected  PrevHash %x, but got %x", hash, av.PrevHash)
-	}
-	hash = av.Hash
+	hash = av.hash
 	b = b.Next()
 
-	nc := b.Value.(Block)
-	nc_ex, err := nc.FromNameChange()
-	if err != nil {
-		panic(err)
+	nc := b.Value.(*ChangeName)
+	if nc.action != changeName {
+		t.Errorf("Expected Action %s, but got %s", "NameChange", nc.action)
 	}
-	if nc.Action != NameChange {
-		t.Errorf("Expected Action %s, but got %s", "NameChange", nc.Action)
+	if nc.name != "alice" {
+		t.Errorf("Expected Name %s, but got %s", "alice", nc.name)
 	}
-	if nc.Name != "alice" {
-		t.Errorf("Expected Name %s, but got %s", "alice", nc.Name)
+	if nc.newName != "Alice" {
+		t.Errorf("Expected New Name %s, but got %s", "Alice", nc.newName)
 	}
-	if nc_ex != "Alice" {
-		t.Errorf("Expected New Name %s, but got %s", "Alice", nc_ex)
+	if nc.prevHash != hash {
+		t.Errorf("Expected  PrevHash %x, but got %x", hash, nc.prevHash)
 	}
-	if nc.PrevHash != hash {
-		t.Errorf("Expected  PrevHash %x, but got %x", hash, nc.PrevHash)
-	}
-	hash = nc.Hash
+	hash = nc.hash
 	b = b.Next()
 
 	// TODO
@@ -174,214 +167,171 @@ func TestBlockChain(t *testing.T) {
 
 // Testing the Block Methods
 
-func testBlockCoreEqual(a Block, b Block) bool {
-	if a.PrevHash != b.PrevHash {
-		return false
-	}
-	if a.PubSol != b.PubSol {
-		return false
-	}
-	if a.NextPub != b.NextPub {
-		return false
-	}
-	if a.Name != b.Name {
-		return false
-	}
-	return true
-}
-
 func TestGenesisBlock(t *testing.T) {
-	gen := Block{}
-	gen.Name = "Spaceduck"
-	rand.Read(gen.PrevHash[:])
-	rand.Read(gen.PubSol[:])
-	rand.Read(gen.NextPub[:])
+	name := "Spaceduck"
+	title := "Intellectual Dark Web"
+	var prev_hash [HashSize]byte
+	rand.Read(prev_hash[:])
+	pub_valid := PrivValidation{}
+	rand.Read(pub_valid.solution[:])
+	rand.Read(pub_valid.nextPuzzle[:])
+	admin_valid := PrivValidation{}
+	rand.Read(admin_valid.solution[:])
+	rand.Read(admin_valid.nextPuzzle[:])
 
-	var gen_cpy = gen
+	gen := MakeGenesis(prev_hash, name, pub_valid, admin_valid, title, peer.ID([]byte{3, 7}))
 
-	var priv [PuzzleSize]byte
-	rand.Read(priv[:])
-	gen.MakeGenesis("Intellectual Dark Web", priv, peer.ID([]byte{3, 7}))
-
-	if gen.Action != Genesis {
-		t.Errorf("MakeGenesis made block action %s, when it should have been %s", gen.Action, Genesis)
+	if gen.action != genesis {
+		t.Errorf("MakeGenesis made block action %s, when it should have been %s",
+			gen.action, genesis)
 	}
 
-	if testBlockCoreEqual(gen, gen_cpy) != true {
-		t.Errorf("MakeGenesis Modified the the block core")
+	given_hash := gen.GetHash()
+	gen.SetHash([HashSize]byte{0})
+	measured_hash := Hash(gen)
+	gen.SetHash(given_hash)
+	if gen.hash != measured_hash {
+		t.Errorf("Expected Hash %x, but got %x", measured_hash, gen.hash)
 	}
 
-	hash := sha256.Sum256(gen.serialize())
-	if gen.Hash != hash {
-		t.Errorf("Expected Hash %x, but got %x", hash, gen.Hash)
-	}
-
-	gen_ex, err := gen.FromGenesis()
-	if err != nil {
-		panic(err)
-	}
 	idw := string("Intellectual Dark Web")
-	if gen_ex.Title != idw {
-		t.Errorf("Expected Title %s, but got %s", idw, gen_ex.Title)
+	if gen.title != idw {
+		t.Errorf("Expected Title %s, but got %s", idw, gen.title)
 	}
-	ver := peer.ID([]byte{3, 7})
-	if gen_ex.Ver != ver {
-		t.Errorf("Expected Id %x, but got %x", ver, gen_ex.Ver)
+	node := peer.ID([]byte{3, 7})
+	if gen.nodeID != node {
+		t.Errorf("Expected Id %x, but got %x", node, gen.nodeID)
 	}
 }
 
 func TestPostBlock(t *testing.T) {
-	post := Block{}
-	rand.Read(post.PrevHash[:])
-	rand.Read(post.PubSol[:])
-	rand.Read(post.NextPub[:])
+	name := "SpaceDuck"
+	var prevHash [HashSize]byte
+	rand.Read(prevHash[:])
+	var pub_valid PrivValidation
+	rand.Read(pub_valid.solution[:])
+	rand.Read(pub_valid.nextPuzzle[:])
+	p := MakePost(prevHash, name, pub_valid, "Welcome to the Intellecutial Dark Web!")
 
-	var post_cpy = post
-
-	post.MakePost("Welcome to the Intellecutial Dark Web!")
-
-	if post.Action != Post {
-		t.Errorf("MakePost made block action %s, when it should have been %s", post.Action, Post)
-	}
-	if testBlockCoreEqual(post, post_cpy) != true {
-		t.Errorf("MakePost Modified the the block core")
+	if p.action != post {
+		t.Errorf("MakePost made block action %s, when it should have been %s", p.action, post)
 	}
 
-	hash := sha256.Sum256(post.serialize())
-	if post.Hash != hash {
-		t.Errorf("Expected Hash %x, but got %x", hash, post.Hash)
-	}
-
-	post_str, err := post.FromPost()
-	if err != nil {
-		panic(err)
+	given_hash := p.GetHash()
+	p.SetHash([HashSize]byte{0})
+	measured_hash := Hash(p)
+	p.SetHash(given_hash)
+	if p.hash != measured_hash {
+		t.Errorf("Expected Hash %x, but got %x", measured_hash, p.hash)
 	}
 
 	idw := string("Welcome to the Intellecutial Dark Web!")
-	if post_str != idw {
-		t.Errorf("Expected Post %s, but got %s", idw, post_str)
+	if p.msg != idw {
+		t.Errorf("Expected Post %s, but got %s", idw, p.msg)
 	}
 }
 
 func TestNameChangeBlock(t *testing.T) {
-	post := Block{}
-	rand.Read(post.PrevHash[:])
-	rand.Read(post.PubSol[:])
-	rand.Read(post.NextPub[:])
+	name := "SpaceDuck"
+	var prevHash [HashSize]byte
+	rand.Read(prevHash[:])
+	var pub_valid PrivValidation
+	rand.Read(pub_valid.solution[:])
+	rand.Read(pub_valid.nextPuzzle[:])
+	change_name := MakeChangeName(prevHash, name, pub_valid, "$paceDuck")
 
-	var post_cpy = post
-
-	post.MakeNameChange("$paceDuck")
-
-	if post.Action != NameChange {
-		t.Errorf("MakeNameChange made block action %s, when it should have been %s", post.Action,
-			NameChange)
-	}
-	if testBlockCoreEqual(post, post_cpy) != true {
-		t.Errorf("MakeNameChange Modified the the block core")
+	if change_name.action != changeName {
+		t.Errorf("MakeNameChange made block action %s, when it should have been %s",
+			change_name.action, changeName)
 	}
 
-	hash := sha256.Sum256(post.serialize())
-	if post.Hash != hash {
-		t.Errorf("Expected Hash %x, but got %x", hash, post.Hash)
+	given_hash := change_name.GetHash()
+	change_name.SetHash([HashSize]byte{0})
+	measured_hash := Hash(change_name)
+	change_name.SetHash(given_hash)
+	if change_name.hash != measured_hash {
+		t.Errorf("Expected Hash %x, but got %x", measured_hash, change_name.hash)
 	}
 
-	new_name, err := post.FromNameChange()
-	if err != nil {
-		panic(err)
-	}
-
-	name := string("$paceDuck")
-	if new_name != name {
-		t.Errorf("Expected Post %s, but got %s", name, new_name)
+	name = "$paceDuck"
+	if change_name.newName != name {
+		t.Errorf("Expected Post %s, but got %s", name, change_name.newName)
 	}
 }
 
 func TestAddPubBlock(t *testing.T) {
-	ap := Block{}
-	rand.Read(ap.PrevHash[:])
-	rand.Read(ap.PubSol[:])
-	rand.Read(ap.NextPub[:])
-
-	var ap_cpy = ap
+	name := "SpaceDuck"
+	var prev_hash [HashSize]byte
+	rand.Read(prev_hash[:])
+	pub_valid := PrivValidation{}
+	rand.Read(pub_valid.solution[:])
+	rand.Read(pub_valid.nextPuzzle[:])
+	admin_valid := PrivValidation{}
+	rand.Read(admin_valid.solution[:])
+	rand.Read(admin_valid.nextPuzzle[:])
 
 	var new_pub [PuzzleSize]byte
 	rand.Read(new_pub[:])
-	var priv_sol [SolutionSize]byte
-	rand.Read(priv_sol[:])
-	var next_priv [PuzzleSize]byte
-	rand.Read(next_priv[:])
-	ap.MakeAddPub(AddPubExtras{new_pub, "SpaceGoose", priv_sol, next_priv})
 
-	if ap.Action != AddPub {
-		t.Errorf("MakePost made block action %s, when it should have been %s", ap.Action, AddPub)
-	}
-	if testBlockCoreEqual(ap, ap_cpy) != true {
-		t.Errorf("MakeAddPub Modified the the block core")
+	ap := MakeAddPublisher(prev_hash, name, pub_valid, admin_valid, new_pub, "SpaceGoose")
+
+	if ap.action != addPublisher {
+		t.Errorf("MakePost made block action %s, when it should have been %s", ap.action, addPublisher)
 	}
 
-	hash := sha256.Sum256(ap.serialize())
-	if ap.Hash != hash {
-		t.Errorf("Expected Hash %x, but got %x", hash, ap.Hash)
+	given_hash := ap.GetHash()
+	ap.SetHash([HashSize]byte{0})
+	measured_hash := Hash(ap)
+	ap.SetHash(given_hash)
+	if ap.hash != measured_hash {
+		t.Errorf("Expected Hash %x, but got %x", measured_hash, ap.hash)
 	}
 
-	ap_ex, err := ap.FromAddPub()
-	if err != nil {
-		panic(err)
+	if ap.newPublisherPuzzle != new_pub {
+		t.Errorf("Expected NewPub %x, but got %x", new_pub, ap.newPublisherPuzzle)
 	}
-	if ap_ex.NewPub != new_pub {
-		t.Errorf("Expected NewPub %x, but got %x", new_pub, ap_ex.NewPub)
+	me := "SpaceGoose"
+	if ap.newName != me {
+		t.Errorf("Expected NewName %s, but got %s", me, ap.newName)
 	}
-	me := string("SpaceGoose")
-	if ap_ex.NewName != me {
-		t.Errorf("Expected NewName %s, but got %s", me, ap_ex.NewName)
+	if ap.adminValid.solution != admin_valid.solution {
+		t.Errorf("Expected PrivSol %x, but got %x", admin_valid.solution, ap.adminValid.solution)
 	}
-	if ap_ex.PrivSol != priv_sol {
-		t.Errorf("Expected PrivSol %x, but got %x", priv_sol, ap_ex.PrivSol)
-	}
-	if ap_ex.NextPriv != next_priv {
-		t.Errorf("Expected PrivSol %x, but got %x", next_priv, ap_ex.NextPriv)
+	if ap.adminValid.nextPuzzle != admin_valid.nextPuzzle {
+		t.Errorf("Expected PrivSol %x, but got %x", ap.adminValid.nextPuzzle, admin_valid.nextPuzzle)
 	}
 }
 
-func TestAddVerBlock(t *testing.T) {
-	av := Block{}
-	rand.Read(av.PrevHash[:])
-	rand.Read(av.PubSol[:])
-	rand.Read(av.NextPub[:])
+func TestAddNodeBlock(t *testing.T) {
+	name := "SpaceDuck"
+	var prev_hash [HashSize]byte
+	rand.Read(prev_hash[:])
+	pub_valid := PrivValidation{}
+	rand.Read(pub_valid.solution[:])
+	rand.Read(pub_valid.nextPuzzle[:])
+	admin_valid := PrivValidation{}
+	rand.Read(admin_valid.solution[:])
+	rand.Read(admin_valid.nextPuzzle[:])
+	node := peer.ID([]byte{3, 7})
 
-	var av_cpy = av
+	av := MakeAddNode(prev_hash, name, pub_valid, admin_valid, node)
 
-	var priv_sol [SolutionSize]byte
-	rand.Read(priv_sol[:])
-	var next_priv [PuzzleSize]byte
-	rand.Read(next_priv[:])
-	ver := peer.ID([]byte{3, 7})
-	av.MakeAddVer(AddVerExtras{priv_sol, next_priv, ver})
-
-	if av.Action != AddVer {
-		t.Errorf("MakePost made block action %s, when it should have been %s", av.Action, AddVer)
-	}
-	if testBlockCoreEqual(av, av_cpy) != true {
-		t.Errorf("MakeAddPub Modified the the block core")
+	if av.action != addNode {
+		t.Errorf("MakePost made block action %s, when it should have been %s", av.action, addNode)
 	}
 
-	hash := sha256.Sum256(av.serialize())
-	if av.Hash != hash {
-		t.Errorf("Expected Hash %x, but got %x", hash, av.Hash)
+	given_hash := av.GetHash()
+	av.SetHash([HashSize]byte{0})
+	measured_hash := Hash(av)
+	av.SetHash(given_hash)
+	if av.hash != measured_hash {
+		t.Errorf("Expected Hash %x, but got %x", measured_hash, av.hash)
 	}
 
-	av_ex, err := av.FromAddVer()
-	if err != nil {
-		panic(err)
+	if av.adminValid != admin_valid {
+		t.Errorf("Expected PrivSol %x, but got %x", admin_valid, av.adminValid)
 	}
-	if av_ex.PrivSol != priv_sol {
-		t.Errorf("Expected PrivSol %x, but got %x", priv_sol, av_ex.PrivSol)
-	}
-	if av_ex.NextPriv != next_priv {
-		t.Errorf("Expected PrivSol %x, but got %x", next_priv, av_ex.NextPriv)
-	}
-	if av_ex.NewVer != ver {
-		t.Errorf("Expected Id %x, but got %x", ver, av_ex.NewVer)
+	if av.newNodeID != node {
+		t.Errorf("Expected Id %x, but got %x", node, av.newNodeID)
 	}
 }
