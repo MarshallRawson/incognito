@@ -11,29 +11,38 @@ import (
 )
 
 type Self struct {
-	Id   peer.ID
+	ID   peer.ID
 	Name string
 }
 
 type BlockChain struct {
-	self      Self
-	pub_sol   [SolutionSize]byte
-	priv_sol  [SolutionSize]byte
-	chain     list.List                   // the actual list of blocks
-	pub_name  map[[PuzzleSize]byte]string // people with solutions to this are able to post messages
-	priv      *set.Set                    // people with solutions to this AND a pub are able to add/remove pubs/vers
-	verifiers *set.Set                    // these are peers who are sent every block in the chain and are asked to verify
+	self        Self
+	publish_sol [SolutionSize]byte
+	admin_sol   [SolutionSize]byte
+	chain       list.List
+	publishers  map[[PuzzleSize]byte]string
+	admins      *set.Set
+	nodes       *set.Set
 }
 
 func New(self Self) *BlockChain {
 	bc := new(BlockChain)
 	bc.self = self
 	bc.chain.Init()
-	bc.priv = set.New()
-	bc.verifiers = set.New()
-	bc.pub_name = make(map[[PuzzleSize]byte]string)
+	bc.admins = set.New()
+	bc.nodes = set.New()
+	bc.publishers = make(map[[PuzzleSize]byte]string)
 
-	n, err := rand.Read(bc.pub_sol[:])
+	getValidSol(&bc.publish_sol)
+	getValidSol(&bc.admin_sol)
+
+	return bc
+}
+
+func getValidSol(sol *[SolutionSize]byte) [SolutionSize]byte {
+	var ret [SolutionSize]byte
+	copy(ret[:], sol[:])
+	n, err := rand.Read(sol[:])
 	if err != nil {
 		panic(err)
 	}
@@ -41,266 +50,128 @@ func New(self Self) *BlockChain {
 		err_msg := fmt.Sprintf("Wrong size solution Generated for Publish Solution. Expected %d, got %d", SolutionSize, n)
 		panic(errors.New(err_msg))
 	}
-
-	n, err = rand.Read(bc.priv_sol[:])
-	if err != nil {
-		panic(err)
-	}
-	if n != SolutionSize {
-		err_msg := fmt.Sprintf("Wrong size solution Generated for Privileged Solution. Expected %d, got %d", SolutionSize, n)
-		panic(errors.New(err_msg))
-	}
-	return bc
+	return ret
 }
 
-func (bc *BlockChain) Genesis(title string) {
-	var hash [HashSize]byte
-	binary.PutUvarint(hash[:], 37) // no signifigance in this number
-
-	var pub_sol [SolutionSize]byte
-	binary.PutUvarint(pub_sol[:], 37) // no signifigance in this number
-
-	block := Block{
-		PrevHash: hash,
-		PubSol:   pub_sol,
-		Name:     bc.self.Name,
-		NextPub:  Hash(bc.pub_sol[:]),
+func (bc *BlockChain) AddBlock(b Block) error {
+	// make sure valid hash
+	ret := CheckHash(b)
+	if ret != true {
+		err_msg := fmt.Sprintf("Invalid hash: %v", b)
+		return errors.New(err_msg)
 	}
-	block.MakeGenesis(title, Hash(bc.priv_sol[:]), bc.self.Id)
-	err := bc.AddBlock(block)
-	if err != nil {
-		panic(err)
+	// make sure that validations are correct
+	ret = b.CheckValidations(bc.publishers, bc.admins)
+	if ret != true {
+		err_msg := fmt.Sprintf("Invalid validation: %v", b)
+		return errors.New(err_msg)
 	}
+	// given both of these, lets make sure that prev hash is right (unless Genesis block)
+	switch b.(type) {
+	case *Genesis:
+		if bc.chain.Len() != 0 {
+			err_msg := fmt.Sprintf("Attempted Genesis block when chain not empty: %v", bc.chain)
+			return errors.New(err_msg)
+		}
+	default:
+		if bc.chain.Len() == 0 {
+			err_msg := fmt.Sprintf("Chain has no prev blocks: %v", bc.chain.Back())
+			return errors.New(err_msg)
+		} else if bc.chain.Back().Value.(Block).GetHash() != b.GetPrevHash() {
+			err_msg := fmt.Sprintf("Invalid prevHash: %v, %v", bc.chain.Back(), b)
+			return errors.New(err_msg)
+		}
+	}
+	bc.chain.PushBack(b)
+	b.ApplyValidations(bc.publishers, bc.admins)
+	return nil
 }
 
-func (bc *BlockChain) AddBlock(block Block) error {
-	ret, err := bc.CheckBlock(block)
+func (bc *BlockChain) Genesis(title string) error {
+	var prev_hash [HashSize]byte
+	binary.PutUvarint(prev_hash[:], 37) // no signifigance in this number
+
+	var solution_placeholder [SolutionSize]byte
+	binary.PutUvarint(solution_placeholder[:], 37) // no signifigance in this number
+
+	var gen Block
+	gen = MakeGenesis(prev_hash,
+		bc.self.Name,
+		PrivValidation{solution: solution_placeholder, nextPuzzle: Hash(bc.publish_sol)},
+		PrivValidation{solution: solution_placeholder, nextPuzzle: Hash(bc.admin_sol)},
+		title,
+		bc.self.ID)
+
+	err := bc.AddBlock(gen)
 	if err != nil {
 		return err
-	}
-	if ret != Success {
-		err_msg := fmt.Sprintf("Invalid block: %s", ret)
-		return errors.New(err_msg)
-	}
-
-	switch block.Action {
-	case Genesis:
-		bc.addGenesisBlock(block)
-	case Post:
-		bc.addPostBlock(block)
-	case NameChange:
-		bc.addNameChangeBlock(block)
-	case AddPub:
-		bc.addAddPubBlock(block)
-	case AddVer:
-		bc.addAddVerBlock(block)
-	default:
-		err_msg := fmt.Sprintf("Invalid block action: %s", block.Action)
-		return errors.New(err_msg)
 	}
 	return nil
 }
 
-type BlockCheckReturn string
-
-const (
-	Success          = "Success"          // No Failure, the block in question fits!
-	NoHistory        = "NoHistory"        // Attempting to put non-genesis block as not-first
-	BadName          = "BadName"          // Attempting to put non-genesis block as not-first
-	GenesisMisplaced = "GenesisMisplaced" // Attempting to put genesis block as not-first
-	BadPrevHash      = "BadPrevHash"      // Prev hash does not match the hash of the prev message
-	BadHash          = "BadHash"          // The hash of this block is incorrect
-	BadPubSol        = "BadPubSol"        // The Publisher Solution for this block is wrong
-	BadPrivSol       = "BadPrivSol"       // The Privleged Solution for this block is wrong
-	Misc             = "Misc"             // Some other error occured (return non-nil error)
-)
-
-func (bc *BlockChain) CheckBlock(block Block) (BlockCheckReturn, error) {
-	if block.Action == Genesis {
-		if bc.chain.Len() != 0 {
-			return GenesisMisplaced, nil
-		}
-		if block.Hash != Hash(block.serialize()) {
-			return BadHash, nil
-		}
-	} else if block.Action == Post ||
-		block.Action == NameChange ||
-		block.Action == AddPub ||
-		block.Action == AddVer {
-		if bc.chain.Len() == 0 {
-			return NoHistory, nil
-		}
-
-		// make sure fits in histroy
-		if block.PrevHash != bc.chain.Back().Value.(Block).Hash {
-			return BadPrevHash, nil
-		}
-
-		// make sure has valid hash
-		if block.Hash != Hash(block.serialize()) {
-			return BadHash, nil
-		}
-
-		// proof of authorized publisher
-		if _, ok := bc.pub_name[Hash(block.PubSol[:])]; ok == false {
-			return BadPubSol, nil
-		}
-
-		// make sure the pub name is consistent
-		if name, _ := bc.pub_name[Hash(block.PubSol[:])]; name != block.Name {
-			return BadName, nil
-		}
-
-		// if adding a publisher, we need to check the privileged solution as well
-		if block.Action == AddPub {
-			add_pub, err := block.FromAddPub()
-			if err != nil {
-				panic(err)
-			}
-			if bc.priv.Has(Hash(add_pub.PrivSol[:])) == false {
-				return BadPrivSol, nil
-			}
-		}
-		// if adding a verifier, we also need to check the privileged
-		if block.Action == AddVer {
-			add_ver, err := block.FromAddVer()
-			if err != nil {
-				panic(err)
-			}
-			if bc.priv.Has(Hash(add_ver.PrivSol[:])) == false {
-				return BadPrivSol, nil
-			}
-		}
-	} else {
-		err_msg := fmt.Sprintf("Unrecognized block type %T!\n", block)
-		return Misc, errors.New(err_msg)
-	}
-	return Success, nil
-}
-
-func (bc *BlockChain) addGenesisBlock(block Block) {
-	// does not check hashes on block chain
-	gen, err := block.FromGenesis()
+func (bc *BlockChain) Post(msg string) error {
+	sol := getValidSol(&(bc.publish_sol))
+	next_puzzle := Hash(bc.publish_sol)
+	pv := PrivValidation{solution: sol, nextPuzzle: next_puzzle}
+	p := MakePost(bc.chain.Back().Value.(Block).GetHash(), bc.self.Name, pv, msg)
+	err := bc.AddBlock(p)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	bc.chain.PushBack(block)
-	bc.verifiers.Insert(gen.Ver)
-	bc.pub_name[block.NextPub] = block.Name
-	bc.priv.Insert(gen.Priv)
+	return nil
 }
 
-func (bc *BlockChain) updateName(block Block) {
-	name := bc.pub_name[Hash(block.PubSol[:])]
-	delete(bc.pub_name, Hash(block.PubSol[:]))
-	bc.pub_name[block.NextPub] = name
-}
-
-func (bc *BlockChain) addPostBlock(block Block) {
-	// does not check hashes on block chain
-	_, err := block.FromPost()
+func (bc *BlockChain) ChangeName(new_name string) error {
+	sol := getValidSol(&(bc.publish_sol))
+	next_puzzle := Hash(bc.publish_sol)
+	pv := PrivValidation{solution: sol, nextPuzzle: next_puzzle}
+	var change_name Block
+	change_name = MakeChangeName(bc.chain.Back().Value.(Block).GetHash(), bc.self.Name, pv, new_name)
+	err := bc.AddBlock(change_name)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	bc.chain.PushBack(block)
-	bc.updateName(block)
+	return nil
 }
 
-func (bc *BlockChain) addNameChangeBlock(block Block) {
-	// does not check hashes on block chain
-	new_name, err := block.FromNameChange()
+func (bc *BlockChain) AddPublisher(friend_puzzle [PuzzleSize]byte, friend_name string) error {
+	sol := getValidSol(&(bc.publish_sol))
+	next_puzzle := Hash(bc.publish_sol)
+	pv := PrivValidation{solution: sol, nextPuzzle: next_puzzle}
+
+	a_sol := getValidSol(&(bc.admin_sol))
+	a_next_puzzle := Hash(bc.admin_sol)
+	a_pv := PrivValidation{solution: a_sol, nextPuzzle: a_next_puzzle}
+
+	var add_publisher Block
+	add_publisher = MakeAddPublisher(bc.chain.Back().Value.(Block).GetHash(),
+		bc.self.Name,
+		pv,
+		a_pv,
+		friend_puzzle,
+		friend_name)
+
+	add_publisher.CheckValidations(bc.publishers, bc.admins)
+
+	err := bc.AddBlock(add_publisher)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	bc.chain.PushBack(block)
-	bc.updateName(block)
-	bc.pub_name[block.NextPub] = new_name
+	return nil
 }
 
-func (bc *BlockChain) addAddPubBlock(block Block) {
-	// does not check hashes on block chain
-	ap, err := block.FromAddPub()
+func (bc *BlockChain) AddNode(friend_peerID peer.ID) error {
+	var add_node Block
+	add_node = MakeAddNode(bc.chain.Back().Value.(Block).GetHash(),
+		bc.self.Name,
+		PrivValidation{solution: getValidSol(&bc.publish_sol), nextPuzzle: Hash(bc.publish_sol)},
+		PrivValidation{solution: getValidSol(&bc.admin_sol), nextPuzzle: Hash(bc.admin_sol)},
+		friend_peerID)
+	err := bc.AddBlock(add_node)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	bc.chain.PushBack(block)
-	bc.updateName(block)
-	bc.pub_name[ap.NewPub] = ap.NewName
-	bc.priv.Remove(Hash(ap.PrivSol[:]))
-	bc.priv.Insert(ap.NextPriv)
-}
-
-func (bc *BlockChain) addAddVerBlock(block Block) {
-	// does not check hashes on block chain
-	av, err := block.FromAddVer()
-	if err != nil {
-		panic(err)
-	}
-	bc.chain.PushBack(block)
-	bc.updateName(block)
-	bc.priv.Remove(Hash(av.PrivSol[:]))
-	bc.priv.Insert(av.NextPriv)
-	bc.verifiers.Insert(av.NewVer)
-}
-
-func (bc *BlockChain) MakeNextBlock() Block {
-	block := Block{Name: bc.self.Name}
-	block.PrevHash = bc.chain.Back().Value.(Block).Hash
-	block.PubSol = bc.pub_sol
-	_, err := rand.Read(bc.pub_sol[:]) // replenish the pub_sol
-	if err != nil {
-		panic(err)
-	}
-	block.NextPub = Hash(bc.pub_sol[:])
-	return block
-}
-
-func (bc *BlockChain) Post(msg string) {
-	post := bc.MakeNextBlock()
-	post.MakePost(msg)
-	err := bc.AddBlock(post)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (bc *BlockChain) NameChange(new_name string) {
-	name_change := bc.MakeNextBlock()
-	name_change.MakeNameChange(new_name)
-	err := bc.AddBlock(name_change)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (bc *BlockChain) getPriv() ([SolutionSize]byte, [PuzzleSize]byte) {
-	priv_sol := bc.priv_sol
-
-	_, err := rand.Read(bc.priv_sol[:])
-	if err != nil {
-		panic(err)
-	}
-	return priv_sol, Hash(bc.priv_sol[:])
-}
-
-func (bc *BlockChain) AddPub(friend_puzzle [PuzzleSize]byte, friend_name string) {
-	friend := bc.MakeNextBlock()
-	priv_sol, next_priv := bc.getPriv()
-	friend.MakeAddPub(AddPubExtras{friend_puzzle, friend_name, priv_sol, next_priv})
-	err := bc.AddBlock(friend)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (bc *BlockChain) AddVer(friend_peerID peer.ID) {
-	friend := bc.MakeNextBlock()
-	priv_sol, next_priv := bc.getPriv()
-	friend.MakeAddVer(AddVerExtras{priv_sol, next_priv, friend_peerID})
-	err := bc.AddBlock(friend)
-	if err != nil {
-		panic(err)
-	}
+	return nil
 }
 
 func (bc *BlockChain) ShareChain() list.List {
@@ -309,9 +180,9 @@ func (bc *BlockChain) ShareChain() list.List {
 }
 
 func (bc *BlockChain) SharePubPuzzle() [PuzzleSize]byte {
-	return Hash(bc.pub_sol[:])
+	return Hash(bc.publish_sol[:])
 }
 
 func (bc *BlockChain) ShareId() peer.ID {
-	return bc.self.Id
+	return bc.self.ID
 }
