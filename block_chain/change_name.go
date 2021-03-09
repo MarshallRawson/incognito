@@ -1,30 +1,38 @@
 package block_chain
 
 import (
+	"fmt"
 	"github.com/golang-collections/collections/set"
 )
 
 type ChangeName struct {
 	block
-	action  Action
-	newName string
+	NewName string
 }
 
-func MakeChangeName(prev_hash [HashSize]byte,
+func NewChangeName(prev_hash [HashSize]byte,
 	name string,
 	pub_valid PrivValidation,
 	new_name string) *ChangeName {
 
 	cn := ChangeName{
-		action:  changeName,
-		newName: new_name,
+		NewName: new_name,
 	}
-	cn.prevHash = prev_hash
-	cn.name = name
-	cn.publishValid = pub_valid
-	cn.hash = [HashSize]byte{0}
-	cn.hash = Hash(&cn)
+	cn.PrevHash = prev_hash
+	cn.Name = name
+	cn.PublishValid = pub_valid
+	cn.Action = changeName
+	cn.Hash = [HashSize]byte{0}
+	cn.Hash = Hash(&cn)
 	return &cn
+}
+
+func (cn *ChangeName) GetAction() Action {
+	return cn.block.GetAction()
+}
+
+func (cn *ChangeName) AsString() string {
+	return fmt.Sprintf("%s Changed Name to %s\n", cn.Name, cn.NewName)
 }
 
 func (cn *ChangeName) GetHash() [HashSize]byte {
@@ -35,6 +43,10 @@ func (cn *ChangeName) GetPrevHash() [HashSize]byte {
 	return cn.block.GetPrevHash()
 }
 
+func (cn *ChangeName) GetName() string {
+	return cn.block.GetName()
+}
+
 func (cn *ChangeName) SetHash(new_hash [HashSize]byte) {
 	cn.block.SetHash(new_hash)
 }
@@ -43,13 +55,13 @@ func (cn *ChangeName) CheckValidations(publishers map[[PuzzleSize]byte]string, a
 	if cn.block.CheckValidations(publishers) == false {
 		return false
 	}
-	if publishers[Hash(cn.publishValid.solution)] != cn.name {
+	if publishers[Hash(cn.PublishValid.Solution)] != cn.Name {
 		return false
 	}
 	return true
 }
 
 func (cn *ChangeName) ApplyValidations(publishers map[[PuzzleSize]byte]string, admins *set.Set) {
-	delete(publishers, Hash(cn.publishValid.solution))
-	publishers[cn.publishValid.nextPuzzle] = cn.newName
+	delete(publishers, Hash(cn.PublishValid.Solution))
+	publishers[cn.PublishValid.NextPuzzle] = cn.NewName
 }

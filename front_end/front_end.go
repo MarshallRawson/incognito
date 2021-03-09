@@ -3,9 +3,9 @@ package front_end
 import (
 	"fmt"
 	"net"
-	"runtime"
 	"net/http"
 	"os/exec"
+	"runtime"
 )
 
 type FrontEnd struct {
@@ -25,7 +25,7 @@ func (front_end FrontEnd) isLocalHost(w http.ResponseWriter, r *http.Request) bo
 	}
 
 	// do not let someone who is not the local host connect (ipv6 and ipv4)
-	if ip != "127.0.0.1" && ip != "::1"{
+	if ip != "127.0.0.1" && ip != "::1" {
 		http.NotFound(w, r)
 		fmt.Println("Rejecting ip: ", ip)
 		return false
@@ -60,7 +60,6 @@ func Run() {
 	if err != nil {
 		panic(err)
 	}
-
 
 	fmt.Println("opened in webpage")
 	err = http.Serve(listener, FrontEnd{})
