@@ -1,19 +1,19 @@
 package block_chain
 
 import (
+	"fmt"
 	"github.com/golang-collections/collections/set"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 type Genesis struct {
 	block
-	action     Action
-	adminValid PrivValidation
-	title      string
-	nodeID     peer.ID
+	AdminValid PrivValidation
+	Title      string
+	NodeID     peer.ID
 }
 
-func MakeGenesis(prev_hash [HashSize]byte,
+func NewGenesis(prev_hash [HashSize]byte,
 	name string,
 	pub_valid PrivValidation,
 	admin_valid PrivValidation,
@@ -21,17 +21,25 @@ func MakeGenesis(prev_hash [HashSize]byte,
 	node_id peer.ID) *Genesis {
 
 	gen := Genesis{
-		action:     genesis,
-		adminValid: admin_valid,
-		title:      title,
-		nodeID:     node_id,
+		AdminValid: admin_valid,
+		Title:      title,
+		NodeID:     node_id,
 	}
-	gen.prevHash = prev_hash
-	gen.name = name
-	gen.publishValid = pub_valid
-	gen.hash = [HashSize]byte{0}
-	gen.hash = Hash(&gen)
+	gen.PrevHash = prev_hash
+	gen.Name = name
+	gen.PublishValid = pub_valid
+	gen.Action = genesis
+	gen.Hash = [HashSize]byte{0}
+	gen.Hash = Hash(&gen)
 	return &gen
+}
+
+func (g *Genesis) GetAction() Action {
+	return g.block.GetAction()
+}
+
+func (g *Genesis) AsString() string {
+	return fmt.Sprintf("%s: Welcome to %s\n", g.Name, g.Title)
 }
 
 func (g *Genesis) GetHash() [HashSize]byte {
@@ -40,6 +48,10 @@ func (g *Genesis) GetHash() [HashSize]byte {
 
 func (g *Genesis) GetPrevHash() [HashSize]byte {
 	return g.block.GetPrevHash()
+}
+
+func (g *Genesis) GetName() string {
+	return g.block.GetName()
 }
 
 func (g *Genesis) SetHash(new_hash [HashSize]byte) {
@@ -51,6 +63,6 @@ func (g *Genesis) CheckValidations(publishers map[[PuzzleSize]byte]string, admin
 }
 
 func (g *Genesis) ApplyValidations(publishers map[[PuzzleSize]byte]string, admins *set.Set) {
-	publishers[g.publishValid.nextPuzzle] = g.name
-	admins.Insert(g.adminValid.nextPuzzle)
+	publishers[g.PublishValid.NextPuzzle] = g.Name
+	admins.Insert(g.AdminValid.NextPuzzle)
 }

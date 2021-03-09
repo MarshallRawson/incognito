@@ -1,30 +1,38 @@
 package block_chain
 
 import (
+	"fmt"
 	"github.com/golang-collections/collections/set"
 )
 
 type Post struct {
 	block
-	action Action
-	msg    string
+	Msg string
 }
 
-func MakePost(prev_hash [HashSize]byte,
+func NewPost(prev_hash [HashSize]byte,
 	name string,
 	pub_valid PrivValidation,
 	msg string) *Post {
 
-	post := Post{
-		action: post,
-		msg:    msg,
+	p := Post{
+		Msg: msg,
 	}
-	post.prevHash = prev_hash
-	post.name = name
-	post.publishValid = pub_valid
-	post.hash = [HashSize]byte{0}
-	post.hash = Hash(&post)
-	return &post
+	p.PrevHash = prev_hash
+	p.Name = name
+	p.PublishValid = pub_valid
+	p.Action = post
+	p.Hash = [HashSize]byte{0}
+	p.Hash = Hash(&p)
+	return &p
+}
+
+func (p *Post) GetAction() Action {
+	return p.block.GetAction()
+}
+
+func (p *Post) AsString() string {
+	return fmt.Sprintf("%s: %s\n", p.Name, p.Msg)
 }
 
 func (p *Post) GetHash() [HashSize]byte {
@@ -35,6 +43,10 @@ func (p *Post) GetPrevHash() [HashSize]byte {
 	return p.block.GetPrevHash()
 }
 
+func (p *Post) GetName() string {
+	return p.block.GetName()
+}
+
 func (p *Post) SetHash(new_hash [HashSize]byte) {
 	p.block.SetHash(new_hash)
 }
@@ -43,14 +55,14 @@ func (p *Post) CheckValidations(publishers map[[PuzzleSize]byte]string, admins *
 	if p.block.CheckValidations(publishers) == false {
 		return false
 	}
-	if publishers[Hash(p.publishValid.solution)] != p.name {
+	if publishers[Hash(p.PublishValid.Solution)] != p.Name {
 		return false
 	}
 	return true
 }
 
 func (p *Post) ApplyValidations(publishers map[[PuzzleSize]byte]string, admins *set.Set) {
-	name := publishers[Hash(p.publishValid.solution)]
-	delete(publishers, Hash(p.publishValid.solution))
-	publishers[p.publishValid.nextPuzzle] = name
+	name := publishers[Hash(p.PublishValid.Solution)]
+	delete(publishers, Hash(p.PublishValid.Solution))
+	publishers[p.PublishValid.NextPuzzle] = name
 }
