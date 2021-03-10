@@ -10,7 +10,7 @@ type ChangeName struct {
 	newName string
 }
 
-func MakeChangeName(prev_hash [HashSize]byte,
+func NewChangeName(prev_hash [HashSize]byte,
 	name string,
 	pub_valid PrivValidation,
 	new_name string) *ChangeName {

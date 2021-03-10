@@ -12,7 +12,7 @@ type AddPublisher struct {
 	newName            string
 }
 
-func MakeAddPublisher(prev_hash [HashSize]byte,
+func NewAddPublisher(prev_hash [HashSize]byte,
 	name string,
 	pub_valid PrivValidation,
 	admin_valid PrivValidation,

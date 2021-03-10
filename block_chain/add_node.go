@@ -12,7 +12,7 @@ type AddNode struct {
 	newNodeID  peer.ID
 }
 
-func MakeAddNode(prev_hash [HashSize]byte,
+func NewAddNode(prev_hash [HashSize]byte,
 	name string,
 	pub_valid PrivValidation,
 	admin_valid PrivValidation,

@@ -179,10 +179,10 @@ func TestGenesisBlock(t *testing.T) {
 	rand.Read(admin_valid.solution[:])
 	rand.Read(admin_valid.nextPuzzle[:])
 
-	gen := MakeGenesis(prev_hash, name, pub_valid, admin_valid, title, peer.ID([]byte{3, 7}))
+	gen := NewGenesis(prev_hash, name, pub_valid, admin_valid, title, peer.ID([]byte{3, 7}))
 
 	if gen.action != genesis {
-		t.Errorf("MakeGenesis made block action %s, when it should have been %s",
+		t.Errorf("NewGenesis made block action %s, when it should have been %s",
 			gen.action, genesis)
 	}
 
@@ -211,10 +211,10 @@ func TestPostBlock(t *testing.T) {
 	var pub_valid PrivValidation
 	rand.Read(pub_valid.solution[:])
 	rand.Read(pub_valid.nextPuzzle[:])
-	p := MakePost(prevHash, name, pub_valid, "Welcome to the Intellecutial Dark Web!")
+	p := NewPost(prevHash, name, pub_valid, "Welcome to the Intellecutial Dark Web!")
 
 	if p.action != post {
-		t.Errorf("MakePost made block action %s, when it should have been %s", p.action, post)
+		t.Errorf("NewPost made block action %s, when it should have been %s", p.action, post)
 	}
 
 	given_hash := p.GetHash()
@@ -238,10 +238,10 @@ func TestNameChangeBlock(t *testing.T) {
 	var pub_valid PrivValidation
 	rand.Read(pub_valid.solution[:])
 	rand.Read(pub_valid.nextPuzzle[:])
-	change_name := MakeChangeName(prevHash, name, pub_valid, "$paceDuck")
+	change_name := NewChangeName(prevHash, name, pub_valid, "$paceDuck")
 
 	if change_name.action != changeName {
-		t.Errorf("MakeNameChange made block action %s, when it should have been %s",
+		t.Errorf("NewNameChange made block action %s, when it should have been %s",
 			change_name.action, changeName)
 	}
 
@@ -273,10 +273,10 @@ func TestAddPubBlock(t *testing.T) {
 	var new_pub [PuzzleSize]byte
 	rand.Read(new_pub[:])
 
-	ap := MakeAddPublisher(prev_hash, name, pub_valid, admin_valid, new_pub, "SpaceGoose")
+	ap := NewAddPublisher(prev_hash, name, pub_valid, admin_valid, new_pub, "SpaceGoose")
 
 	if ap.action != addPublisher {
-		t.Errorf("MakePost made block action %s, when it should have been %s", ap.action, addPublisher)
+		t.Errorf("NewPost made block action %s, when it should have been %s", ap.action, addPublisher)
 	}
 
 	given_hash := ap.GetHash()
@@ -314,10 +314,10 @@ func TestAddNodeBlock(t *testing.T) {
 	rand.Read(admin_valid.nextPuzzle[:])
 	node := peer.ID([]byte{3, 7})
 
-	av := MakeAddNode(prev_hash, name, pub_valid, admin_valid, node)
+	av := NewAddNode(prev_hash, name, pub_valid, admin_valid, node)
 
 	if av.action != addNode {
-		t.Errorf("MakePost made block action %s, when it should have been %s", av.action, addNode)
+		t.Errorf("NewPost made block action %s, when it should have been %s", av.action, addNode)
 	}
 
 	given_hash := av.GetHash()

@@ -95,7 +95,7 @@ func (bc *BlockChain) Genesis(title string) error {
 	binary.PutUvarint(solution_placeholder[:], 37) // no signifigance in this number
 
 	var gen Block
-	gen = MakeGenesis(prev_hash,
+	gen = NewGenesis(prev_hash,
 		bc.self.Name,
 		PrivValidation{solution: solution_placeholder, nextPuzzle: Hash(bc.publish_sol)},
 		PrivValidation{solution: solution_placeholder, nextPuzzle: Hash(bc.admin_sol)},
@@ -113,7 +113,7 @@ func (bc *BlockChain) Post(msg string) error {
 	sol := getValidSol(&(bc.publish_sol))
 	next_puzzle := Hash(bc.publish_sol)
 	pv := PrivValidation{solution: sol, nextPuzzle: next_puzzle}
-	p := MakePost(bc.chain.Back().Value.(Block).GetHash(), bc.self.Name, pv, msg)
+	p := NewPost(bc.chain.Back().Value.(Block).GetHash(), bc.self.Name, pv, msg)
 	err := bc.AddBlock(p)
 	if err != nil {
 		return err
@@ -126,7 +126,7 @@ func (bc *BlockChain) ChangeName(new_name string) error {
 	next_puzzle := Hash(bc.publish_sol)
 	pv := PrivValidation{solution: sol, nextPuzzle: next_puzzle}
 	var change_name Block
-	change_name = MakeChangeName(bc.chain.Back().Value.(Block).GetHash(), bc.self.Name, pv, new_name)
+	change_name = NewChangeName(bc.chain.Back().Value.(Block).GetHash(), bc.self.Name, pv, new_name)
 	err := bc.AddBlock(change_name)
 	if err != nil {
 		return err
@@ -144,7 +144,7 @@ func (bc *BlockChain) AddPublisher(friend_puzzle [PuzzleSize]byte, friend_name s
 	a_pv := PrivValidation{solution: a_sol, nextPuzzle: a_next_puzzle}
 
 	var add_publisher Block
-	add_publisher = MakeAddPublisher(bc.chain.Back().Value.(Block).GetHash(),
+	add_publisher = NewAddPublisher(bc.chain.Back().Value.(Block).GetHash(),
 		bc.self.Name,
 		pv,
 		a_pv,
@@ -162,7 +162,7 @@ func (bc *BlockChain) AddPublisher(friend_puzzle [PuzzleSize]byte, friend_name s
 
 func (bc *BlockChain) AddNode(friend_peerID peer.ID) error {
 	var add_node Block
-	add_node = MakeAddNode(bc.chain.Back().Value.(Block).GetHash(),
+	add_node = NewAddNode(bc.chain.Back().Value.(Block).GetHash(),
 		bc.self.Name,
 		PrivValidation{solution: getValidSol(&bc.publish_sol), nextPuzzle: Hash(bc.publish_sol)},
 		PrivValidation{solution: getValidSol(&bc.admin_sol), nextPuzzle: Hash(bc.admin_sol)},

@@ -10,7 +10,7 @@ type Post struct {
 	msg    string
 }
 
-func MakePost(prev_hash [HashSize]byte,
+func NewPost(prev_hash [HashSize]byte,
 	name string,
 	pub_valid PrivValidation,
 	msg string) *Post {

@@ -13,7 +13,7 @@ type Genesis struct {
 	nodeID     peer.ID
 }
 
-func MakeGenesis(prev_hash [HashSize]byte,
+func NewGenesis(prev_hash [HashSize]byte,
 	name string,
 	pub_valid PrivValidation,
 	admin_valid PrivValidation,
