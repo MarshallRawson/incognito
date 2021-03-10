@@ -1,0 +1,16 @@
+/*---Navigation bar position ----*/
+{
+	margin: 0;
+	padding: 0;
+}
+#nav-bar
+{
+	position: sticky;
+	top: o;
+	z-index: 10;
+}
+.navbar-brand img 
+{
+	height: 40px
+	padding-left: 30px;
+}
