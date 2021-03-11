@@ -1,6 +1,7 @@
 package block_chain
 
 import (
+	"fmt"
 	"github.com/golang-collections/collections/set"
 )
 
@@ -25,6 +26,10 @@ func NewChangeName(prev_hash [HashSize]byte,
 	cn.hash = [HashSize]byte{0}
 	cn.hash = Hash(&cn)
 	return &cn
+}
+
+func (cn *ChangeName) AsString() string {
+	return fmt.Sprintf("%s: Changed Name to %s\n", cn.name, cn.newName)
 }
 
 func (cn *ChangeName) GetHash() [HashSize]byte {

@@ -1,6 +1,7 @@
 package block_chain
 
 import (
+	"fmt"
 	"github.com/golang-collections/collections/set"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
@@ -30,6 +31,10 @@ func NewAddNode(prev_hash [HashSize]byte,
 	an.hash = [HashSize]byte{0}
 	an.hash = Hash(&an)
 	return &an
+}
+
+func (an *AddNode) AsString() string {
+	return fmt.Sprintf("%s: Added Node: %s\n", an.name, an.newNodeID.Pretty())
 }
 
 func (an *AddNode) GetHash() [HashSize]byte {

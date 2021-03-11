@@ -32,6 +32,7 @@ type Block interface {
 	SetHash(new_hash [HashSize]byte)
 	CheckValidations(publishers map[[PuzzleSize]byte]string, admins *set.Set) bool
 	ApplyValidations(publishers map[[PuzzleSize]byte]string, admins *set.Set)
+	AsString() string
 }
 
 // base type to be inherited

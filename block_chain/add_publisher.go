@@ -1,6 +1,7 @@
 package block_chain
 
 import (
+	"fmt"
 	"github.com/golang-collections/collections/set"
 )
 
@@ -31,6 +32,10 @@ func NewAddPublisher(prev_hash [HashSize]byte,
 	ap.hash = [HashSize]byte{0}
 	ap.hash = Hash(&ap)
 	return &ap
+}
+
+func (ap *AddPublisher) AsString() string {
+	return fmt.Sprintf("%s: Added Publisher: %s\n", ap.name, ap.newName)
 }
 
 func (ap *AddPublisher) GetHash() [HashSize]byte {

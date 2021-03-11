@@ -1,6 +1,7 @@
 package block_chain
 
 import (
+	"fmt"
 	"github.com/golang-collections/collections/set"
 	"github.com/libp2p/go-libp2p-core/peer"
 )
@@ -32,6 +33,10 @@ func NewGenesis(prev_hash [HashSize]byte,
 	gen.hash = [HashSize]byte{0}
 	gen.hash = Hash(&gen)
 	return &gen
+}
+
+func (g *Genesis) AsString() string {
+	return fmt.Sprintf("%s: Welcome to %s\n", g.name, g.title)
 }
 
 func (g *Genesis) GetHash() [HashSize]byte {

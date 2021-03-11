@@ -1,6 +1,7 @@
 package block_chain
 
 import (
+	"fmt"
 	"github.com/golang-collections/collections/set"
 )
 
@@ -25,6 +26,10 @@ func NewPost(prev_hash [HashSize]byte,
 	post.hash = [HashSize]byte{0}
 	post.hash = Hash(&post)
 	return &post
+}
+
+func (p *Post) AsString() string {
+	return fmt.Sprintf("%s: %s\n", p.name, p.msg)
 }
 
 func (p *Post) GetHash() [HashSize]byte {
