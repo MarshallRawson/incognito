@@ -3,12 +3,13 @@ package front_end
 import (
 	"fmt"
 	"net"
-	"runtime"
 	"net/http"
 	"os/exec"
+	"runtime"
 )
 
 type FrontEnd struct {
+	landing_page_name string
 }
 
 func (front_end FrontEnd) isLocalHost(w http.ResponseWriter, r *http.Request) bool {
@@ -25,7 +26,7 @@ func (front_end FrontEnd) isLocalHost(w http.ResponseWriter, r *http.Request) bo
 	}
 
 	// do not let someone who is not the local host connect (ipv6 and ipv4)
-	if ip != "127.0.0.1" && ip != "::1"{
+	if ip != "127.0.0.1" && ip != "::1" {
 		http.NotFound(w, r)
 		fmt.Println("Rejecting ip: ", ip)
 		return false
@@ -38,10 +39,10 @@ func (front_end FrontEnd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Printf("%s\n", r.RequestURI)
-	w.Write([]byte("<h1>Hello World!</h1>"))
+	http.ServeFile(w, r, front_end.landing_page_name)
 }
 
-func Run() {
+func Run(landing_page_name string) {
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		panic(err)
@@ -61,9 +62,8 @@ func Run() {
 		panic(err)
 	}
 
-
 	fmt.Println("opened in webpage")
-	err = http.Serve(listener, FrontEnd{})
+	err = http.Serve(listener, FrontEnd{landing_page_name: landing_page_name})
 	if err != nil {
 		panic(err)
 	}
