@@ -6,6 +6,8 @@ require (
 	fyne.io/fyne v1.4.3 // indirect
 	fyne.io/fyne/v2 v2.0.0 // indirect
 	github.com/dtylman/gowd v0.0.0-20190619113956-15e38debca22
+	github.com/gizak/termui v3.1.0+incompatible // indirect
+	github.com/gizak/termui/v3 v3.1.0 // indirect
 	github.com/go-gl/glfw v0.0.0-20201108214237-06ea97f0c265 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20201108214237-06ea97f0c265 // indirect
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3

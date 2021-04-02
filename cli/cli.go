@@ -5,12 +5,23 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/MarshallRawson/incognito/block_chain"
+	ui "github.com/gizak/termui/v3"
+	"github.com/gizak/termui/v3/widgets"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"log"
 	"os"
 	"strings"
 )
 
+type state string
+
+const (
+	start  = "start"
+	action = "action"
+)
+
 func Run() {
+	state := start
 	start_map := map[string]func([]string) *block_chain.BlockChain{
 		"genesis": genesis,
 		"load":    command_not_yet_supported,
@@ -27,72 +38,112 @@ func Run() {
 		"r":             refresh,
 		"exit":          action_not_yet_supported,
 	}
+	if err := ui.Init(); err != nil {
+		log.Fatalf("failed to initialize termui: %v", err)
+	}
+	defer ui.Close()
 
+	grid := ui.NewGrid()
+	termWidth, termHeight := ui.TerminalDimensions()
+	grid.SetRect(0, 0, termWidth, termHeight)
+
+	blocks := widgets.NewParagraph()
+	commandList := widgets.NewList()
+	commandList.Title = "Availible Commands"
+	messageWindow := widgets.NewParagraph()
+	messageWindow.Title = "Message"
+	grid.Set(
+		ui.NewRow(0.5, ui.NewCol(1.0, blocks)),
+		ui.NewRow(0.25, ui.NewCol(1.0, commandList)),
+		ui.NewRow(0.25, ui.NewCol(1.0, messageWindow)))
+
+	ui.Render(grid)
+	uiEvent := ui.PollEvents()
 	for {
-		fmt.Println("\ncommands: [load [title], genesis [name, title], join [name], exit]")
-		fmt.Printf("-> ")
-		reader := bufio.NewReader(os.Stdin)
-		input, _ := reader.ReadString('\n')
-		args := strings.Fields(input)
-		if len(args) == 0 {
-			continue
-		}
-		var bc *block_chain.BlockChain = nil
-		if _, ok := start_map[args[0]]; ok == false {
-			bc = unknown_command(args[1:])
-		} else {
-			bc = start_map[args[0]](args[1:])
-		}
-		if args[0] == "exit" {
-			break
-		}
-
-		// if the function succeded
-		if bc == nil {
-			continue
-		}
-		// display the chain as it is
-		chain := bc.ShareChain()
-		b := chain.Front()
-		for ; b != nil; b = b.Next() {
-			fmt.Printf(b.Value.(block_chain.Block).AsString())
-		}
-		b = chain.Back()
-		for {
-			fmt.Println("\nactions: [post [msg], change_name [new_name], add_publisher [name, puzzle], add_node [ID], invite, exit]")
-			fmt.Printf("-> ")
-			input, _ := reader.ReadString('\n')
-			split := strings.Index(input, " ")
-			var action, arg string
-			if split == -1 {
-				args := strings.Fields(input)
-				if len(args) == 0 {
-					continue
+		select {
+		case e := <-uiEvent:
+			if e.Type == ui.KeyboardEvent {
+				switch {
+				case e.ID == "<C-c>" || e.ID == "<C-4>":
+					return
+				case e.ID == "<Space>":
+					messageWindow.Text += " "
+				case e.ID == "<Backspace>":
+					messageWindow.Text = messageWindow.Text[:len(messageWindow.Text)-1]
+				case len(e.ID) == 1:
+					messageWindow.Text += e.ID
 				}
-				action = args[0]
-				arg = ""
-			} else {
-				action = input[:split]
-				arg = input[split+1:]
+				ui.Render(grid)
 			}
-			if _, ok := action_map[action]; ok == false {
-				unknown_action(bc, arg)
+		}
+	}
+
+	/*
+		for {
+			fmt.Println("\ncommands: [load [title], genesis [name, title], join [name], exit]")
+			fmt.Printf("-> ")
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			args := strings.Fields(input)
+			if len(args) == 0 {
 				continue
-			} else {
-				action_map[action](bc, arg)
 			}
-			if action == "exit" {
+			var bc *block_chain.BlockChain = nil
+			if _, ok := start_map[args[0]]; ok == false {
+				bc = unknown_command(args[1:])
+			} else {
+				bc = start_map[args[0]](args[1:])
+			}
+			if args[0] == "exit" {
 				break
 			}
 
+			// if the function succeded
+			if bc == nil {
+				continue
+			}
+			// display the chain as it is
 			chain := bc.ShareChain()
-			b = chain.Front()
+			b := chain.Front()
 			for ; b != nil; b = b.Next() {
 				fmt.Printf(b.Value.(block_chain.Block).AsString())
 			}
 			b = chain.Back()
-		}
-	}
+			for {
+				fmt.Println("\nactions: [post [msg], change_name [new_name], add_publisher [name, puzzle], add_node [ID], invite, exit]")
+				fmt.Printf("-> ")
+				input, _ := reader.ReadString('\n')
+				split := strings.Index(input, " ")
+				var action, arg string
+				if split == -1 {
+					args := strings.Fields(input)
+					if len(args) == 0 {
+						continue
+					}
+					action = args[0]
+					arg = ""
+				} else {
+					action = input[:split]
+					arg = input[split+1:]
+				}
+				if _, ok := action_map[action]; ok == false {
+					unknown_action(bc, arg)
+					continue
+				} else {
+					action_map[action](bc, arg)
+				}
+				if action == "exit" {
+					break
+				}
+
+				chain := bc.ShareChain()
+				b = chain.Front()
+				for ; b != nil; b = b.Next() {
+					fmt.Printf(b.Value.(block_chain.Block).AsString())
+				}
+				b = chain.Back()
+			}
+		}*/
 }
 
 // commands
