@@ -6,8 +6,13 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"html/template"
 )
 
+var (
+	templates *template.Template
+	landing_page string
+)
 type FrontEnd struct {
 	landing_page_name string
 }
@@ -34,13 +39,13 @@ func (front_end FrontEnd) isLocalHost(w http.ResponseWriter, r *http.Request) bo
 	return true
 }
 
-func (front_end FrontEnd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !front_end.isLocalHost(w, r) {
-		return
-	}
-	fmt.Printf("%s\n", r.RequestURI)
-	http.ServeFile(w, r, front_end.landing_page_name)
-}
+// func (front_end FrontEnd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// 	if !front_end.isLocalHost(w, r) {
+// 		return
+// 	}
+// 	fmt.Printf("%s\n", r.RequestURI)
+// 	http.ServeFile(w, r, front_end.landing_page_name)
+// }
 
 func Run(landing_page_name string) {
 	listener, err := net.Listen("tcp", ":0")
@@ -63,8 +68,28 @@ func Run(landing_page_name string) {
 	}
 
 	fmt.Println("opened in webpage")
-	err = http.Serve(listener, FrontEnd{landing_page_name: landing_page_name})
+	http.Handle("/front_end/", http.StripPrefix("/front_end/",http.FileServer(http.Dir("./front_end"))))
+	
+	http.HandleFunc("/", index)
+
+	// Serve /joinpage with a text response.
+	http.HandleFunc("/joinpage", joinpage)
+	templates = template.Must(template.ParseFiles(landing_page_name))
+	panic(http.Serve(listener, nil))
+}
+
+func index(w http.ResponseWriter, r *http.Request) {
+
+	err := templates.ExecuteTemplate(w, "index.html", nil)
 	if err != nil {
-		panic(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func joinpage(w http.ResponseWriter, r *http.Request) {
+
+	err := templates.ExecuteTemplate(w, "index.html", nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
