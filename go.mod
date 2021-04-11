@@ -11,7 +11,7 @@ require (
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
 	github.com/libp2p/go-libp2p v0.13.0
 	github.com/libp2p/go-libp2p-core v0.8.0
-	github.com/libp2p/go-libp2p-pubsub v0.4.1 // indirect
+	github.com/libp2p/go-libp2p-pubsub v0.4.1
 	github.com/multiformats/go-multiaddr v0.3.1 // indirect
 	github.com/srwiley/oksvg v0.0.0-20210209000435-a757b9cbd472 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect

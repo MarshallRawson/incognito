@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Incognito</title>
+<link rel="stylesheet" href="front_end/style.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.6.0/dist/umd/popper.min.js" integrity="sha384-KsvD1yqQ1/1+IA7gi3P0tyJcT3vR+NdBTt13hSJ2lnve8agRGXTTyNaBYmCR/Nwi" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.min.js" integrity="sha384-nsg8ua9HAw1y0W1btsyWgBklPnCUAFLuTMS2G72MMONqmOymq585AcH49TLBQObG" crossorigin="anonymous"></script>
+
+</head>
+<body>
+
+<!-----NavigationBar----->
+<section id="nav-bar">
+	<nav class="navbar navbar-expand-lg navbar-light">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#"><img src="front_end/images/logo.PNG" width="200" height="40"></a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Features</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Account</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">About Incognito</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+</section>
+
+
+<div class="card-group">
+  <div class="card">
+    <img
+      src="front_end/images/fun.jpeg"
+      
+      class="card-img-top"
+      alt="..."
+    />
+    <div class="card-body">
+      <h5 class="card-title">Load a Page</h5>
+      <p class="card-text">
+        Open one of your existing pages to stay updated with other members of this group. Here you can share with friends and communicate with others with similar interests.
+      </p>
+      <p class="card-text">
+        <button type="button" class="btn btn-primary btn-lg" onclick=LoadPage()>Load Page</button>
+      </p>
+    </div>
+  </div>
+  <div class="card">
+    <img
+      src="front_end/images/phone.jpeg"
+      class="card-img-top"
+      alt="..."
+    />
+    <div class="card-body">
+      <h5 class="card-title">Start a Custom Page</h5>
+      <p class="card-text">
+        Incognito Makes creating a page fast and easy. Given incognito as privacy options, you can choose who can have access to the page. Incognito also allows users to edit a shareable URL to expand your group.
+      </p>
+      <p class="card-text">
+        <button type="button" class="btn btn-primary btn-lg" onclick=StartPage()>Start Page</button>
+      </p>
+    </div>
+  </div>
+  <div class="card">
+    <img
+      src="front_end/images/friends.jpeg"
+      class="card-img-top"
+      alt="..."
+    />
+    <div class="card-body">
+      <h5 class="card-title">Join a New Page</h5>
+      <p class="card-text">
+        Once you have joined a page, you can view shared content, post your own ideas, and communicate under the privacy of Incognito's unique blockchain technology.
+      </p>
+      <p class="card-text">
+        <button type="button" class="btn btn-primary btn-lg" onclick=JoinPage()>Join Page</button>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function StartPage(){
+    //TODO - redirect to Start page
+    alert('Clicked Start - TODO');
+  }
+
+  function JoinPage(){
+    //TODO - redirect to join page
+    alert(window.location.host );
+    // $.ajax({
+		// 				url: window.location.host + "/joinpage",
+		// 				method: "GET",
+		// 				success: function(data) {
+		// 					
+		// 				},
+		// 			});
+  }
+
+  function LoadPage(){
+    //TODO - redirect to Load page
+    alert('Clicked Load Page - TODO');
+  }
+</script>
+</body>
+</html>
