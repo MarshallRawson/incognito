@@ -1,0 +1,57 @@
+/*---Navigation bar position ----*/
+/*
+{
+  margin: 0;
+  padding: 0;
+}
+*/
+
+#nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.navbar-brand img {
+  height: 40px;
+  padding-left: 30px;
+}
+.navbar-nav li {
+  padding: 0 10px;
+}
+.navbar-nav li a {
+  float: right;
+  text-align: left;
+}
+#nav-bar ul li a:hover {
+  color: #ea3335 !important;
+}
+.navbar-toggler {
+  border: none !important;
+}
+.btn-primary,
+.btn-primary btn-lg,
+.btn-primary:active,
+.btn-primary:visited {
+  background-color: #96a4ad !important;
+  border-color: #ea3335;
+}
+.btn-primary:hover {
+  background-color: #ea3335 !important;
+  border-color: #ea3335;
+}
+
+.dropdown-item:hover {
+  color: #ea3335 !important;
+}
+.dropdown-item:focus {
+  color: #ea3335 !important;
+}
+
+.dropdown-item {
+  font: Helvetica;
+  color: #737373;
+}
+
+.dropdown-header {
+  font: Helvetica;
+}
