@@ -10,6 +10,7 @@ import (
 
 	"github.com/MarshallRawson/incognito/block_chain"
 	"github.com/libp2p/go-libp2p-core/peer"
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 type interactive_region struct {
@@ -142,11 +143,12 @@ func Run() {
 	scrn.menu_stuff = menuStuff{
 		[]map[string]cliFunc{
 			map[string]cliFunc{
-				"load":             {"[title]", command_not_yet_supported},
-				"genesis":          {"[name title]", genesis},
-				"give_credentials": {"[name]", give_credentials},
-				"join":             {"[title genesis_hash]", join},
-				"exit":             {"", command_not_yet_supported},
+				"load":                {"[title]", command_not_yet_supported},
+				"genesis":             {"[name title]", genesis},
+				"give_credentials":    {"[name]", give_credentials},
+				"give_credentials_qr": {"[name]", give_credentials_qr},
+				"join":                {"[title genesis_hash]", join},
+				"exit":                {"", command_not_yet_supported},
 			},
 			map[string]cliFunc{
 				"post":          {"[msg]", post},
@@ -154,6 +156,7 @@ func Run() {
 				"add_publisher": {"[name puzzle]", add_publisher},
 				"add_node":      {"[ID]", add_node},
 				"invite":        {"", invite},
+				"invite_qr":     {"", invite_qr},
 				"exit":          {"", action_not_yet_supported},
 			}},
 		0}
@@ -200,7 +203,6 @@ func genesis(args []string) (*block_chain.BlockChain, string) {
 	}
 	return bc, ""
 }
-
 func give_credentials(args []string) (*block_chain.BlockChain, string) {
 	if len(args) != 1 {
 		return nil, "exactly 1 arg required: name\n"
@@ -210,6 +212,16 @@ func give_credentials(args []string) (*block_chain.BlockChain, string) {
 	ret := fmt.Sprintf("Give the following lines to the admin of the block chain you want to join \nadd_publisher %s %x\nadd_node %s\n",
 		args[0], bc.SharePubPuzzle(), peer.IDHexEncode(bc.ShareID()))
 	return bc, ret
+}
+
+func give_credentials_qr(args []string) (*block_chain.BlockChain, string) {
+	bc, s := give_credentials(args)
+	q, err := qrcode.New(s, qrcode.Highest)
+	if err != nil {
+		return bc, "Error makin qr code"
+	}
+	art := q.ToString(false)
+	return bc, art
 }
 
 func join(args []string) (*block_chain.BlockChain, string) {
@@ -305,6 +317,16 @@ func invite(bc *block_chain.BlockChain, msg []string) string {
 		panic(err)
 	}
 	return fmt.Sprintf("join " + inv + "\n")
+}
+
+func invite_qr(bc *block_chain.BlockChain, msg []string) string {
+	s := invite(bc, msg)
+	q, err := qrcode.New(s, qrcode.Highest)
+	if err != nil {
+		return "Error makin qr code"
+	}
+	art := q.ToString(false)
+	return art
 }
 
 func action_not_yet_supported(bc *block_chain.BlockChain, msg []string) string {
