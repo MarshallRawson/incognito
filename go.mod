@@ -13,6 +13,7 @@ require (
 	github.com/libp2p/go-libp2p-core v0.8.0
 	github.com/libp2p/go-libp2p-pubsub v0.4.1
 	github.com/multiformats/go-multiaddr v0.3.1 // indirect
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/srwiley/oksvg v0.0.0-20210209000435-a757b9cbd472 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/webview/webview v0.0.0-20210216142346-e0bfdf0e5d90

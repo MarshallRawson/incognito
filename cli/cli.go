@@ -274,7 +274,7 @@ func add_publisher(bc *block_chain.BlockChain, args []string) string {
 		panic(err)
 	}
 	if len(_puzzle) != block_chain.PuzzleSize {
-		return fmt.Sprintln("Malformed puzzle. Expected %d bytes, got %d\n",
+		return fmt.Sprintf("Malformed puzzle. Expected %d bytes, got %d\n",
 			block_chain.PuzzleSize, len(_puzzle))
 	}
 	var puzzle [block_chain.PuzzleSize]byte
