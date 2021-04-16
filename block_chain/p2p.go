@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/p2p/discovery"
-	"time"
 )
 
 type p2pStuff struct {
@@ -100,7 +101,7 @@ func (bc *BlockChain) readLoop() {
 			if err != nil {
 				fmt.Println("Could not Unmarshal block from message: ", err)
 			}
-			err = bc.addBlock(b)
+			err = bc.AddBlock(b)
 			if err != nil {
 				bc.p2p.requestChain()
 			}
@@ -111,7 +112,7 @@ func (bc *BlockChain) readLoop() {
 				// unmarshall the first (and check that it is a genesis)
 				b, err := UnmarshalBlock(d[1])
 				if err == nil && b.GetAction() == genesis && b.GetHash() == bc.p2p.genesis_hash {
-					bc_test := New(MakeSelf(b.GetName()))
+					bc_test := New(MakeSelf(b.GetName()), false)
 					chain_valid := true
 					for i := 1; i < len(d); i += 1 {
 						b, err = UnmarshalBlock(d[i])
@@ -122,6 +123,7 @@ func (bc *BlockChain) readLoop() {
 						}
 						err := bc_test.AddBlock(b)
 						if err != nil {
+							fmt.Println("invalid block: ", b.AsString())
 							chain_valid = false
 							break
 						}

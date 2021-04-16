@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+
 	"github.com/golang-collections/collections/set"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -37,7 +38,9 @@ type BlockChain struct {
 	chain     list.List
 	chain_in  chan Block
 	chain_err chan error
-	chain_out chan list.List
+
+	asyncOut bool
+	ChainOut chan list.List
 
 	publishers map[[PuzzleSize]byte]string
 	admins     *set.Set
@@ -45,7 +48,7 @@ type BlockChain struct {
 	p2p        *p2pStuff
 }
 
-func New(self self) *BlockChain {
+func New(self self, asyncOut bool) *BlockChain {
 	bc := new(BlockChain)
 	bc.self = self
 	bc.chain.Init()
@@ -55,9 +58,11 @@ func New(self self) *BlockChain {
 
 	bc.p2p = nil
 
-	bc.chain_in = make(chan Block, 1)
-	bc.chain_err = make(chan error, 1)
-	bc.chain_out = make(chan list.List, 1)
+	bc.chain_in = make(chan Block)
+	bc.chain_err = make(chan error)
+
+	bc.asyncOut = asyncOut
+	bc.ChainOut = make(chan list.List, 1) //SyncValueNew(bc.chain)
 
 	getValidSol(&bc.publish_sol)
 	getValidSol(&bc.admin_sol)
@@ -104,6 +109,9 @@ func (bc *BlockChain) AddBlock(b Block) error {
 	if bc.p2p != nil {
 		bc.p2p.publishBlock(b)
 	}
+	if bc.asyncOut == true {
+		bc.ChainOut <- bc.chain
+	}
 	return nil
 }
 
@@ -111,33 +119,40 @@ func (bc *BlockChain) addBlock(b Block) error {
 	// make sure valid hash
 	ret := CheckHash(b)
 	if ret != true {
-		err_msg := fmt.Sprintf("Invalid hash: %v", b)
+		err_msg := fmt.Sprintf("Invalid hash: %+v", b)
 		return errors.New(err_msg)
 	}
 	// make sure that validations are correct
 	ret = b.CheckValidations(bc.publishers, bc.admins)
 	if ret != true {
-		err_msg := fmt.Sprintf("Invalid validation: %v", b)
+		err_msg := fmt.Sprintf("Invalid validation: %+v", b)
 		return errors.New(err_msg)
 	}
 	// given both of these, lets make sure that prev hash is right (unless Genesis block)
 	switch b.(type) {
 	case *Genesis:
 		if bc.chain.Len() != 0 {
-			err_msg := fmt.Sprintf("Attempted Genesis block when chain not empty: %v", bc.chain)
+			err_msg := fmt.Sprintf("Attempted Genesis block when chain not empty: %+v", bc.chain)
 			return errors.New(err_msg)
 		}
 	default:
 		if bc.chain.Len() == 0 {
-			err_msg := fmt.Sprintf("Chain has no prev blocks: %v", bc.chain.Back())
+			err_msg := fmt.Sprintf("Chain has no prev blocks: %+v", bc.chain.Back())
 			return errors.New(err_msg)
 		} else if bc.chain.Back().Value.(Block).GetHash() != b.GetPrevHash() {
-			err_msg := fmt.Sprintf("Invalid prevHash: %v, %v", bc.chain.Back(), b)
+			err_msg := fmt.Sprintf("Invalid prevHash: %+v,\n%+v", bc.chain.Back(), b)
 			return errors.New(err_msg)
 		}
 	}
 	bc.chain.PushBack(b)
 	b.ApplyValidations(bc.publishers, bc.admins)
+	switch b.(type) {
+	case *ChangeName:
+		cn := b.(*ChangeName)
+		if bc.self.name == cn.Name {
+			bc.self.name = cn.NewName
+		}
+	}
 	return nil
 }
 

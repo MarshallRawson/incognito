@@ -2,189 +2,278 @@ package cli
 
 import (
 	"bufio"
+	"container/list"
 	"encoding/hex"
 	"fmt"
-	"github.com/MarshallRawson/incognito/block_chain"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"os"
 	"strings"
+
+	"github.com/MarshallRawson/incognito/block_chain"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
-func Run() {
-	start_map := map[string]func([]string) *block_chain.BlockChain{
-		"genesis": genesis,
-		"load":    command_not_yet_supported,
-		"join":    join,
-		"exit":    command_not_yet_supported,
-	}
+type interactive_region struct {
+	in  chan string
+	out chan string
+}
 
-	action_map := map[string]func(*block_chain.BlockChain, string){
-		"post":          post,
-		"change_name":   change_name,
-		"add_publisher": add_publisher,
-		"add_node":      add_node,
-		"invite":        invite,
-		"r":             refresh,
-		"exit":          action_not_yet_supported,
-	}
+type screen struct {
+	chat_in    chan list.List
+	chat_out   chan string
+	chat_store string
 
+	menu       interactive_region
+	menu_stuff menuStuff
+	menu_store string
+
+	key_out   chan rune
+	key_store string
+}
+
+func keyboard(out chan rune) {
+	in := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Println("\ncommands: [load [title], genesis [name, title], join [name], exit]")
-		fmt.Printf("-> ")
-		reader := bufio.NewReader(os.Stdin)
-		input, _ := reader.ReadString('\n')
-		args := strings.Fields(input)
-		if len(args) == 0 {
-			continue
+		s, _, err := in.ReadRune()
+		if err != nil {
+			panic(err)
 		}
-		var bc *block_chain.BlockChain = nil
-		if _, ok := start_map[args[0]]; ok == false {
-			bc = unknown_command(args[1:])
-		} else {
-			bc = start_map[args[0]](args[1:])
+		out <- s
+	}
+}
+
+type cliFunc struct {
+	decr string
+	f    interface{}
+}
+
+type menuState int
+
+const (
+	home = 0
+	chat = 1
+)
+
+type menuStuff struct {
+	options []map[string]cliFunc
+	state   menuState
+}
+
+var bc *block_chain.BlockChain
+
+func menu(ir *interactive_region, self *menuStuff, chat_out chan string) {
+	kill := make(chan struct{})
+	for {
+		s := <-ir.in
+		args := strings.Fields(s)
+		func_map := self.options[self.state]
+		ret := "\n"
+		if len(args) != 0 {
+			if self.state == home {
+				err_msg := ""
+				if _, ok := func_map[args[0]]; ok == false {
+					err_msg = unknown_command(args[1:])
+				} else {
+					bc, err_msg = func_map[args[0]].f.(func([]string) (*block_chain.BlockChain, string))(args[1:])
+					self.state = chat
+				}
+				if args[0] == "exit" {
+					os.Exit(0)
+				}
+				// if the function failed
+				if bc == nil || err_msg != "" {
+					self.state = home
+					ret += s
+					ret += err_msg
+				} else {
+					go link_bc_out(bc.ChainOut, chat_out, kill)
+				}
+			} else if self.state == chat {
+				if _, ok := func_map[args[0]]; ok == false {
+					ret += s
+					ret += unknown_command(args[1:])
+				} else {
+					ret += func_map[args[0]].f.(func(*block_chain.BlockChain, []string) string)(bc, args[1:])
+					self.state = chat
+				}
+				if args[0] == "exit" {
+					kill <- struct{}{}
+					self.state = home
+				}
+			}
 		}
-		if args[0] == "exit" {
+		func_map = self.options[self.state]
+		for cmd, f := range func_map {
+			ret += cmd + f.decr + " | "
+		}
+		ret += "\n"
+		ir.out <- ret
+	}
+}
+
+func link_bc_out(chat_in chan list.List, chat_out chan string, kill chan struct{}) {
+	for {
+		if bc == nil {
+			fmt.Println("Ive been dooped!")
 			break
 		}
-
-		// if the function succeded
-		if bc == nil {
-			continue
+		select {
+		case l := <-chat_in:
+			s := ""
+			for i := l.Front(); i != nil; i = i.Next() {
+				s += i.Value.(block_chain.Block).AsString()
+				fmt.Println(s)
+			}
+			chat_out <- s
+		case <-kill:
+			return
 		}
-		// display the chain as it is
-		chain := bc.ShareChain()
-		b := chain.Front()
-		for ; b != nil; b = b.Next() {
-			fmt.Printf(b.Value.(block_chain.Block).AsString())
-		}
-		b = chain.Back()
-		for {
-			fmt.Println("\nactions: [post [msg], change_name [new_name], add_publisher [name, puzzle], add_node [ID], invite, exit]")
-			fmt.Printf("-> ")
-			input, _ := reader.ReadString('\n')
-			split := strings.Index(input, " ")
-			var action, arg string
-			if split == -1 {
-				args := strings.Fields(input)
-				if len(args) == 0 {
-					continue
-				}
-				action = args[0]
-				arg = ""
-			} else {
-				action = input[:split]
-				arg = input[split+1:]
-			}
-			if _, ok := action_map[action]; ok == false {
-				unknown_action(bc, arg)
-				continue
-			} else {
-				action_map[action](bc, arg)
-			}
-			if action == "exit" {
-				break
-			}
+	}
+}
 
-			chain := bc.ShareChain()
-			b = chain.Front()
-			for ; b != nil; b = b.Next() {
-				fmt.Printf(b.Value.(block_chain.Block).AsString())
+func Run() {
+	scrn := screen{}
+	scrn.key_out = make(chan rune)
+
+	scrn.chat_out = make(chan string)
+	scrn.chat_in = make(chan list.List)
+
+	scrn.menu.in = make(chan string)
+	scrn.menu.out = make(chan string)
+	scrn.menu_stuff = menuStuff{
+		[]map[string]cliFunc{
+			map[string]cliFunc{
+				"load":             {"[title]", command_not_yet_supported},
+				"genesis":          {"[name title]", genesis},
+				"give_credentials": {"[name]", give_credentials},
+				"join":             {"[title genesis_hash]", join},
+				"exit":             {"", command_not_yet_supported},
+			},
+			map[string]cliFunc{
+				"post":          {"[msg]", post},
+				"change_name":   {"[new_name]", change_name},
+				"add_publisher": {"[name puzzle]", add_publisher},
+				"add_node":      {"[ID]", add_node},
+				"invite":        {"", invite},
+				"exit":          {"", action_not_yet_supported},
+			}},
+		0}
+
+	go keyboard(scrn.key_out)
+	go menu(&scrn.menu, &scrn.menu_stuff, scrn.chat_out)
+	scrn.menu.in <- "\n"
+	for {
+		select {
+		case s := <-scrn.key_out:
+			scrn.key_store += string(s)
+			if s == '\n' {
+				scrn.menu.in <- scrn.key_store
+				scrn.key_store = ""
 			}
-			b = chain.Back()
+		case s := <-scrn.menu.out:
+			scrn.menu_store = s
+			// clear the screen
+			fmt.Print("\033[H\033[2J")
+			fmt.Print(scrn.chat_store)
+			fmt.Print(scrn.menu_store)
+			fmt.Print(scrn.key_store)
+		case s := <-scrn.chat_out:
+			scrn.chat_store = s
+			fmt.Print("\033[H\033[2J")
+			fmt.Print(scrn.chat_store)
+			fmt.Print(scrn.menu_store)
+			fmt.Print(scrn.key_store)
 		}
 	}
 }
 
 // commands
-func genesis(args []string) *block_chain.BlockChain {
+func genesis(args []string) (*block_chain.BlockChain, string) {
 	if len(args) != 2 {
-		fmt.Println("exactly 2 args required: name, title")
-		return nil
+		return nil, "exactly 2 args required: name, title\n"
 	}
 	// make a new block chain
-	bc := block_chain.New(block_chain.MakeSelf(args[0]))
+	bc := block_chain.New(block_chain.MakeSelf(args[0]), true)
 	// genesis the block chain
 	err := bc.Genesis(args[1])
 	if err != nil {
 		panic(err)
 	}
-	return bc
+	return bc, ""
 }
 
-func join(args []string) *block_chain.BlockChain {
+func give_credentials(args []string) (*block_chain.BlockChain, string) {
 	if len(args) != 1 {
-		fmt.Println("exactly 1 arg required: name")
-		return nil
+		return nil, "exactly 1 arg required: name\n"
 	}
 	// make a new block chain
-	bc := block_chain.New(block_chain.MakeSelf(args[0]))
-	fmt.Println("Give the following lines to the admin of the block chain you want to join")
-	fmt.Printf("add_publisher %s %x\n", args[0], bc.SharePubPuzzle())
-	fmt.Printf("add_node %s\n", peer.IDHexEncode(bc.ShareID()))
-	fmt.Printf("title genesis_hash: ")
-	connect_args := []string{}
-	for len(connect_args) != 2 {
-		reader := bufio.NewReader(os.Stdin)
-		input, _ := reader.ReadString('\n')
-		connect_args = strings.Fields(input)
+	bc := block_chain.New(block_chain.MakeSelf(args[0]), true)
+	ret := fmt.Sprintf("Give the following lines to the admin of the block chain you want to join \nadd_publisher %s %x\nadd_node %s\n",
+		args[0], bc.SharePubPuzzle(), peer.IDHexEncode(bc.ShareID()))
+	return bc, ret
+}
+
+func join(args []string) (*block_chain.BlockChain, string) {
+	for len(args) != 2 {
+		return bc, "exactly 2 args required: title, genesis_hash\n"
 	}
-	g_hash, err := hex.DecodeString(connect_args[1])
+	g_hash, err := hex.DecodeString(args[1])
 	if err != nil {
 		panic(err)
 	}
 	if len(g_hash) != block_chain.HashSize {
-		fmt.Println("Expecting ", block_chain.HashSize, " bytes, got ", len(g_hash))
+		ret := fmt.Sprintf("Expecting %d bytes, got %d\n", block_chain.HashSize, len(g_hash))
+		return bc, ret
 	}
 	var _g_hash [block_chain.HashSize]byte
 	copy(_g_hash[:], g_hash[:])
-	bc.Join(connect_args[0], _g_hash)
-	return bc
+	bc.Join(args[0], _g_hash)
+	return bc, ""
 }
 
-func command_not_yet_supported(args []string) *block_chain.BlockChain {
-	fmt.Println("This command is not yet supported")
-	return nil
+func command_not_yet_supported(args []string) (*block_chain.BlockChain, string) {
+	return nil, "This command is not yet supported\n"
 }
 
-func unknown_command(args []string) *block_chain.BlockChain {
-	fmt.Println("This command is unknown")
-	return nil
+func unknown_command(args []string) string {
+	return "This command is unknown\n"
 }
 
 // actions
-func post(bc *block_chain.BlockChain, msg string) {
+func post(bc *block_chain.BlockChain, args []string) string {
+	msg := strings.Join(args, " ")
 	if len(msg) != 0 {
-		err := bc.Post(msg[:len(msg)-1])
+		err := bc.Post(msg)
 		if err != nil {
 			panic(err)
 		}
 	}
+	return ""
 }
 
-func change_name(bc *block_chain.BlockChain, new_name string) {
-	args := strings.Fields(new_name)
+func change_name(bc *block_chain.BlockChain, args []string) string {
 	if len(args) != 1 {
-		fmt.Println("exactly 1 arg required: new_name")
+		return "exactly 1 arg required: new_name\n"
 	}
 	name := args[0]
 	err := bc.ChangeName(name)
 	if err != nil {
 		panic(err)
 	}
+	return ""
 }
 
-func add_publisher(bc *block_chain.BlockChain, args string) {
-	_args := strings.Fields(args)
-	if len(_args) != 2 {
-		fmt.Println("exactly 2 args required: name puzzle. Got ", len(args))
+func add_publisher(bc *block_chain.BlockChain, args []string) string {
+	if len(args) != 2 {
+		return fmt.Sprintf("exactly 2 args required: name puzzle. Got %d\n", len(args))
 	}
-	name := _args[0]
-	_puzzle, err := hex.DecodeString(_args[1])
+	name := args[0]
+	_puzzle, err := hex.DecodeString(args[1])
 	if err != nil {
 		panic(err)
 	}
 	if len(_puzzle) != block_chain.PuzzleSize {
-		fmt.Println("Malformed puzzle. Expected ", block_chain.PuzzleSize, " bytes, got ", len(_puzzle))
+		return fmt.Sprintln("Malformed puzzle. Expected %d bytes, got %d\n",
+			block_chain.PuzzleSize, len(_puzzle))
 	}
 	var puzzle [block_chain.PuzzleSize]byte
 	copy(puzzle[:], _puzzle[:])
@@ -192,15 +281,14 @@ func add_publisher(bc *block_chain.BlockChain, args string) {
 	if err != nil {
 		panic(err)
 	}
+	return ""
 }
 
-func add_node(bc *block_chain.BlockChain, args string) {
-	_args := strings.Fields(args)
-	if len(_args) != 1 {
-		fmt.Println("exactly 1 arg required: ID. Got ", len(args))
+func add_node(bc *block_chain.BlockChain, args []string) string {
+	if len(args) != 1 {
+		return fmt.Sprintf("exactly 1 arg required: ID. Got %d\n", len(args))
 	}
-
-	ID, err := peer.IDHexDecode(_args[0])
+	ID, err := peer.IDHexDecode(args[0])
 	if err != nil {
 		panic(err)
 	}
@@ -208,24 +296,17 @@ func add_node(bc *block_chain.BlockChain, args string) {
 	if err != nil {
 		panic(err)
 	}
+	return ""
 }
 
-func invite(bc *block_chain.BlockChain, msg string) {
+func invite(bc *block_chain.BlockChain, msg []string) string {
 	inv, err := bc.Invite()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(inv)
+	return fmt.Sprintf("join " + inv + "\n")
 }
 
-func refresh(bc *block_chain.BlockChain, msg string) {
-	return
-}
-
-func action_not_yet_supported(bc *block_chain.BlockChain, msg string) {
-	fmt.Println("This action is not yet supported")
-}
-
-func unknown_action(bc *block_chain.BlockChain, msg string) {
-	fmt.Println("This action is unknown")
+func action_not_yet_supported(bc *block_chain.BlockChain, msg []string) string {
+	return "This action is not yet supported\n"
 }
