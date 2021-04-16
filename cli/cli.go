@@ -10,6 +10,8 @@ import (
 
 	"github.com/MarshallRawson/incognito/block_chain"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"os"
+	"strings"
 )
 
 type interactive_region struct {
