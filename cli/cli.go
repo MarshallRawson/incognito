@@ -42,7 +42,7 @@ func keyboard(out chan rune) {
 	for {
 		s, _, err := in.ReadRune()
 		if err != nil {
-			panic(err)
+			fmt.Fprintf(os.Stderr, err.Error())
 		}
 		out <- s
 	}
@@ -218,7 +218,7 @@ func genesis(args []string) (*block_chain.BlockChain, string) {
 	// genesis the block chain
 	err := bc.Genesis(args[1])
 	if err != nil {
-		panic(err)
+		return nil, err.Error()
 	}
 	return bc, ""
 }
@@ -258,7 +258,7 @@ func join(args []string) (*block_chain.BlockChain, string) {
 	}
 	g_hash, err := hex.DecodeString(args[1])
 	if err != nil {
-		panic(err)
+		return nil, err.Error()
 	}
 	if len(g_hash) != block_chain.HashSize {
 		ret := fmt.Sprintf("Expecting %d bytes, got %d\n", block_chain.HashSize, len(g_hash))
@@ -293,7 +293,7 @@ func post(bc *block_chain.BlockChain, args []string) string {
 	if len(msg) != 0 {
 		err := bc.Post(msg)
 		if err != nil {
-			panic(err)
+			fmt.Fprintf(os.Stderr, err.Error())
 		}
 	}
 	return ""
@@ -306,7 +306,8 @@ func change_name(bc *block_chain.BlockChain, args []string) string {
 	name := args[0]
 	err := bc.ChangeName(name)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, err.Error())
+		return ""
 	}
 	return ""
 }
@@ -318,7 +319,7 @@ func add_publisher(bc *block_chain.BlockChain, args []string) string {
 	name := args[0]
 	_puzzle, err := hex.DecodeString(args[1])
 	if err != nil {
-		panic(err)
+		return err.Error()
 	}
 	if len(_puzzle) != block_chain.PuzzleSize {
 		return fmt.Sprintf("Malformed puzzle. Expected %d bytes, got %d\n",
@@ -328,7 +329,7 @@ func add_publisher(bc *block_chain.BlockChain, args []string) string {
 	copy(puzzle[:], _puzzle[:])
 	err = bc.AddPublisher(puzzle, name)
 	if err != nil {
-		panic(err)
+		return err.Error()
 	}
 	return ""
 }
@@ -339,11 +340,11 @@ func add_node(bc *block_chain.BlockChain, args []string) string {
 	}
 	ID, err := peer.IDHexDecode(args[0])
 	if err != nil {
-		panic(err)
+		return err.Error()
 	}
 	err = bc.AddNode(ID)
 	if err != nil {
-		panic(err)
+		return err.Error()
 	}
 	return ""
 }
@@ -351,7 +352,7 @@ func add_node(bc *block_chain.BlockChain, args []string) string {
 func invite(bc *block_chain.BlockChain, msg []string) string {
 	inv, err := bc.Invite()
 	if err != nil {
-		panic(err)
+		return err.Error()
 	}
 	return fmt.Sprintf("join " + inv + "\n")
 }
