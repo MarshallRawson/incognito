@@ -2,16 +2,21 @@ package cli
 
 import (
 	"bufio"
+	"bytes"
 	"container/list"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"image/jpeg"
 	"os"
 	"strings"
 
+	"github.com/blackjack/webcam"
+
 	"github.com/MarshallRawson/incognito/block_chain"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"os"
-	"strings"
+	"github.com/liyue201/goqr"
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 type interactive_region struct {
@@ -75,8 +80,14 @@ func menu(ir *interactive_region, self *menuStuff, chat_out chan string) {
 				if _, ok := func_map[args[0]]; ok == false {
 					err_msg = unknown_command(args[1:])
 				} else {
-					bc, err_msg = func_map[args[0]].f.(func([]string) (*block_chain.BlockChain, string))(args[1:])
-					self.state = chat
+					switch func_map[args[0]].f.(type) {
+					case func([]string) (*block_chain.BlockChain, string):
+						bc, err_msg = func_map[args[0]].f.(func([]string) (*block_chain.BlockChain, string))(args[1:])
+						self.state = chat
+					case func(chan string):
+						go func_map[args[0]].f.(func(chan string))(ir.in)
+						self.state = home
+					}
 				}
 				if args[0] == "exit" {
 					os.Exit(0)
@@ -94,7 +105,12 @@ func menu(ir *interactive_region, self *menuStuff, chat_out chan string) {
 					ret += s
 					ret += unknown_command(args[1:])
 				} else {
-					ret += func_map[args[0]].f.(func(*block_chain.BlockChain, []string) string)(bc, args[1:])
+					switch func_map[args[0]].f.(type) {
+					case func(*block_chain.BlockChain, []string) string:
+						ret += func_map[args[0]].f.(func(*block_chain.BlockChain, []string) string)(bc, args[1:])
+					case func(chan string):
+						go func_map[args[0]].f.(func(chan string))(ir.in)
+					}
 					self.state = chat
 				}
 				if args[0] == "exit" {
@@ -144,19 +160,23 @@ func Run() {
 	scrn.menu_stuff = menuStuff{
 		[]map[string]cliFunc{
 			map[string]cliFunc{
-				"load":             {"[title]", command_not_yet_supported},
-				"genesis":          {"[name title]", genesis},
-				"give_credentials": {"[name]", give_credentials},
-				"join":             {"[title genesis_hash]", join},
-				"exit":             {"", command_not_yet_supported},
+				"load":                {"[title]", command_not_yet_supported},
+				"genesis":             {"[name title]", genesis},
+				"give_credentials":    {"[name]", give_credentials},
+				"give_credentials_qr": {"[name]", give_credentials_qr},
+				"join":                {"[title genesis_hash]", join},
+				"join_qr":             {"", join_qr},
+				"exit":                {"", command_not_yet_supported},
 			},
 			map[string]cliFunc{
-				"post":          {"[msg]", post},
-				"change_name":   {"[new_name]", change_name},
-				"add_publisher": {"[name puzzle]", add_publisher},
-				"add_node":      {"[ID]", add_node},
-				"invite":        {"", invite},
-				"exit":          {"", action_not_yet_supported},
+				"post":                {"[msg]", post},
+				"change_name":         {"[new_name]", change_name},
+				"add_publisher":       {"[name puzzle]", add_publisher},
+				"add_node":            {"[ID]", add_node},
+				"invite":              {"", invite},
+				"invite_qr":           {"", invite_qr},
+				"read_credentials_qr": {"", read_credentials_qr},
+				"exit":                {"", action_not_yet_supported},
 			}},
 		0}
 
@@ -203,6 +223,14 @@ func genesis(args []string) (*block_chain.BlockChain, string) {
 	return bc, ""
 }
 
+func text_to_qr_text(s string) string {
+	q, err := qrcode.New(s, qrcode.Low)
+	if err != nil {
+		return "Error making qr code\n"
+	}
+	return q.ToString(false)
+}
+
 func give_credentials(args []string) (*block_chain.BlockChain, string) {
 	if len(args) != 1 {
 		return nil, "exactly 1 arg required: name\n"
@@ -212,6 +240,16 @@ func give_credentials(args []string) (*block_chain.BlockChain, string) {
 	ret := fmt.Sprintf("Give the following lines to the admin of the block chain you want to join \nadd_publisher %s %x\nadd_node %s\n",
 		args[0], bc.SharePubPuzzle(), peer.IDHexEncode(bc.ShareID()))
 	return bc, ret
+}
+
+func give_credentials_qr(args []string) (*block_chain.BlockChain, string) {
+	bc, s := give_credentials(args)
+	if bc != nil {
+		creds := strings.Split(s, "\n")
+		art := text_to_qr_text(strings.Join(creds[1:], "\n"))
+		return bc, art
+	}
+	return bc, s
 }
 
 func join(args []string) (*block_chain.BlockChain, string) {
@@ -230,6 +268,15 @@ func join(args []string) (*block_chain.BlockChain, string) {
 	copy(_g_hash[:], g_hash[:])
 	bc.Join(args[0], _g_hash)
 	return bc, ""
+}
+
+func join_qr(out chan string) {
+	s, err := read_qr()
+	if err != nil {
+		fmt.Printf(err.Error())
+	} else {
+		out <- s
+	}
 }
 
 func command_not_yet_supported(args []string) (*block_chain.BlockChain, string) {
@@ -307,6 +354,81 @@ func invite(bc *block_chain.BlockChain, msg []string) string {
 		panic(err)
 	}
 	return fmt.Sprintf("join " + inv + "\n")
+}
+
+func invite_qr(bc *block_chain.BlockChain, msg []string) string {
+	s := invite(bc, msg)
+	return text_to_qr_text(s)
+}
+
+func read_qr() (string, error) {
+	cam, err := webcam.Open("/dev/video0")
+	if err != nil {
+		return "", errors.New("could not open webcam")
+	}
+	formats := cam.GetSupportedFormats()
+	for k, y := range formats {
+		fmt.Println(k, y)
+	}
+	// Motoion-JPEG format
+	p, w, h, err := cam.SetImageFormat(1196444237, 1280, 720)
+	fmt.Println("Camera: ", p, w, h, err)
+	if err != nil {
+		return "", err
+	}
+	err = cam.SetBufferCount(1)
+	if err != nil {
+		return "", err
+	}
+	err = cam.StartStreaming()
+	if err != nil {
+		return "", errors.New("had problem with the webcam\n")
+	}
+	ret := ""
+	for {
+		err := cam.WaitForFrame(1)
+		switch err.(type) {
+		case nil:
+		case *webcam.Timeout:
+			fmt.Printf(err.Error())
+			continue
+		default:
+			return "", err
+		}
+		frame, err := cam.ReadFrame()
+		if len(frame) != 0 {
+			// Process frame
+			img, err := jpeg.Decode(bytes.NewReader(frame))
+			if err != nil {
+				continue
+			}
+			fmt.Println("attempting to recognize")
+			qrCodes, err := goqr.Recognize(img)
+			if err != nil {
+				continue
+			}
+			ret = string(qrCodes[0].Payload)
+			break
+		} else if err != nil {
+			continue
+		}
+	}
+	cam.Close()
+	return ret, nil
+}
+
+func read_credentials_qr(out chan string) {
+	s, err := read_qr()
+	fmt.Printf(s)
+	if err != nil {
+		fmt.Printf(err.Error())
+	} else {
+		creds := strings.Split(s, "\n")
+		for c := range creds {
+			out <- creds[c]
+		}
+		out <- "invite_qr\n"
+	}
 }
 
 func action_not_yet_supported(bc *block_chain.BlockChain, msg []string) string {
