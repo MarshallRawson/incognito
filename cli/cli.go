@@ -68,6 +68,17 @@ type menuStuff struct {
 var bc *block_chain.BlockChain
 
 func menu(ir *interactive_region, self *menuStuff, chat_out chan string) {
+
+	opts := func() string {
+		ret := "\033[1mAvailible Commands:\033[0m\n"
+		func_map := self.options[self.state]
+		for cmd, f := range func_map {
+			ret += cmd + f.decr + "\n"
+		}
+		ret += "\n"
+		return ret
+	}
+
 	kill := make(chan struct{})
 	for {
 		s := <-ir.in
@@ -75,7 +86,8 @@ func menu(ir *interactive_region, self *menuStuff, chat_out chan string) {
 		func_map := self.options[self.state]
 		ret := "\n"
 		if len(args) != 0 {
-			if self.state == home {
+			switch self.state {
+			case home:
 				err_msg := ""
 				if _, ok := func_map[args[0]]; ok == false {
 					err_msg = unknown_command(args[1:])
@@ -96,34 +108,40 @@ func menu(ir *interactive_region, self *menuStuff, chat_out chan string) {
 				if bc == nil || err_msg != "" {
 					self.state = home
 					ret += s
-					ret += err_msg
+					ret += err_msg + "\n"
 				} else {
 					go link_bc_out(bc.ChainOut, chat_out, kill)
 				}
-			} else if self.state == chat {
-				if _, ok := func_map[args[0]]; ok == false {
-					ret += s
-					ret += unknown_command(args[1:])
-				} else {
-					switch func_map[args[0]].f.(type) {
-					case func(*block_chain.BlockChain, []string) string:
-						ret += func_map[args[0]].f.(func(*block_chain.BlockChain, []string) string)(bc, args[1:])
-					case func(chan string):
-						go func_map[args[0]].f.(func(chan string))(ir.in)
+				ret += opts()
+			case chat:
+				if s[0] == '!' {
+					err_msg := ""
+					if _, ok := func_map[args[0]]; ok == false {
+						err_msg = unknown_command(args[1:])
+					} else {
+						switch func_map[args[0]].f.(type) {
+						case func(*block_chain.BlockChain, []string) string:
+							err_msg = func_map[args[0]].f.(func(*block_chain.BlockChain, []string) string)(bc, args[1:])
+						case func(chan string):
+							go func_map[args[0]].f.(func(chan string))(ir.in)
+						}
+						self.state = chat
 					}
-					self.state = chat
-				}
-				if args[0] == "exit" {
-					kill <- struct{}{}
-					self.state = home
+					if err_msg != "" {
+						ret += s
+						ret += err_msg + "\n"
+						ret += opts()
+					} else if args[0] == "!exit" {
+						kill <- struct{}{}
+						self.state = home
+					}
+				} else {
+					post(bc, s[:len(s)-1])
 				}
 			}
+		} else {
+			ret += opts()
 		}
-		func_map = self.options[self.state]
-		for cmd, f := range func_map {
-			ret += cmd + f.decr + " | "
-		}
-		ret += "\n"
 		ir.out <- ret
 	}
 }
@@ -160,23 +178,22 @@ func Run() {
 	scrn.menu_stuff = menuStuff{
 		[]map[string]cliFunc{
 			map[string]cliFunc{
-				"load":                {"[title]", command_not_yet_supported},
-				"genesis":             {"[name title]", genesis},
-				"give_credentials":    {"[name]", give_credentials},
-				"give_credentials_qr": {"[name]", give_credentials_qr},
-				"join":                {"[title genesis_hash]", join},
-				"join_qr":             {"", join_qr},
-				"exit":                {"", command_not_yet_supported},
+				"!load":                {"[title] - load a stored page", command_not_yet_supported},
+				"!start":               {"[name title] - start a new page", genesis},
+				"!give_credentials":    {"[name] - give your credentials to the owner of a page", give_credentials},
+				"!give_credentials_qr": {"[name] - give your credentails via a qr code", give_credentials_qr},
+				"!join":                {"[title genesis_hash] - join a page by inputing the title and genesis hash (from the owner)", join},
+				"!join_qr":             {" - join a page by scanning a QR Code from the owner of a page", join_qr},
+				"!exit":                {"", command_not_yet_supported},
 			},
 			map[string]cliFunc{
-				"post":                {"[msg]", post},
-				"change_name":         {"[new_name]", change_name},
-				"add_publisher":       {"[name puzzle]", add_publisher},
-				"add_node":            {"[ID]", add_node},
-				"invite":              {"", invite},
-				"invite_qr":           {"", invite_qr},
-				"read_credentials_qr": {"", read_credentials_qr},
-				"exit":                {"", action_not_yet_supported},
+				"!change_name":         {"[new_name] - change your name", change_name},
+				"!add_publisher":       {"[name puzzle] - add a publisher by inputting their name and puzzle", add_publisher},
+				"!add_node":            {"[ID] - add a node by inputing the node's ID (all publishers must also be nodes)", add_node},
+				"!invite":              {" - give your page's credentails to a publisher who wants to join", invite},
+				"!invite_qr":           {" - give your page's credentails to a publisher who wants to join via a QR code", invite_qr},
+				"!read_credentials_qr": {" - read the credentials from a publisher who wants to join via a QR code", read_credentials_qr},
+				"!exit":                {" - exit this page", action_not_yet_supported},
 			}},
 		0}
 
@@ -208,13 +225,18 @@ func Run() {
 	}
 }
 
+func get_name_colored(name string) string {
+	rgb := block_chain.Hash(name)
+	return fmt.Sprintf("\033[38;2;%d;%d;%dm%s\033[0m", rgb[0], rgb[1], rgb[2], name)
+}
+
 // commands
 func genesis(args []string) (*block_chain.BlockChain, string) {
 	if len(args) != 2 {
 		return nil, "exactly 2 args required: name, title\n"
 	}
 	// make a new block chain
-	bc := block_chain.New(block_chain.MakeSelf(args[0]), true)
+	bc := block_chain.New(block_chain.MakeSelf(get_name_colored(args[0])), true)
 	// genesis the block chain
 	err := bc.Genesis(args[1])
 	if err != nil {
@@ -236,8 +258,8 @@ func give_credentials(args []string) (*block_chain.BlockChain, string) {
 		return nil, "exactly 1 arg required: name\n"
 	}
 	// make a new block chain
-	bc := block_chain.New(block_chain.MakeSelf(args[0]), true)
-	ret := fmt.Sprintf("Give the following lines to the admin of the block chain you want to join \nadd_publisher %s %x\nadd_node %s\n",
+	bc := block_chain.New(block_chain.MakeSelf(get_name_colored(args[0])), true)
+	ret := fmt.Sprintf("Give the following lines to the admin of the block chain you want to join \n!add_publisher %s %x\n!add_node %s\n",
 		args[0], bc.SharePubPuzzle(), peer.IDHexEncode(bc.ShareID()))
 	return bc, ret
 }
@@ -288,8 +310,7 @@ func unknown_command(args []string) string {
 }
 
 // actions
-func post(bc *block_chain.BlockChain, args []string) string {
-	msg := strings.Join(args, " ")
+func post(bc *block_chain.BlockChain, msg string) string {
 	if len(msg) != 0 {
 		err := bc.Post(msg)
 		if err != nil {
@@ -316,7 +337,7 @@ func add_publisher(bc *block_chain.BlockChain, args []string) string {
 	if len(args) != 2 {
 		return fmt.Sprintf("exactly 2 args required: name puzzle. Got %d\n", len(args))
 	}
-	name := args[0]
+	name := get_name_colored(args[0])
 	_puzzle, err := hex.DecodeString(args[1])
 	if err != nil {
 		return err.Error()
@@ -354,7 +375,7 @@ func invite(bc *block_chain.BlockChain, msg []string) string {
 	if err != nil {
 		return err.Error()
 	}
-	return fmt.Sprintf("join " + inv + "\n")
+	return fmt.Sprintf("Give the following line to the publisher who wants to join this block chain\n!join " + inv + "\n")
 }
 
 func invite_qr(bc *block_chain.BlockChain, msg []string) string {
@@ -428,7 +449,7 @@ func read_credentials_qr(out chan string) {
 		for c := range creds {
 			out <- creds[c]
 		}
-		out <- "invite_qr\n"
+		out <- "!invite_qr\n"
 	}
 }
 
