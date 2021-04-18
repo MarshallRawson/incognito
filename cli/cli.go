@@ -70,7 +70,7 @@ var bc *block_chain.BlockChain
 func menu(ir *interactive_region, self *menuStuff, chat_out chan string) {
 
 	opts := func() string {
-		ret := "\033[1mAvailible Commands:\033[0m\n"
+		ret := "\n\033[1mAvailible Commands:\033[0m (Press Enter to make this menu reappear)\n"
 		func_map := self.options[self.state]
 		for cmd, f := range func_map {
 			ret += cmd + f.decr + "\n"
@@ -84,7 +84,7 @@ func menu(ir *interactive_region, self *menuStuff, chat_out chan string) {
 		s := <-ir.in
 		args := strings.Fields(s)
 		func_map := self.options[self.state]
-		ret := "\n"
+		ret := ""
 		if len(args) != 0 {
 			switch self.state {
 			case home:
@@ -146,19 +146,14 @@ func menu(ir *interactive_region, self *menuStuff, chat_out chan string) {
 	}
 }
 
-func link_bc_out(chat_in chan list.List, chat_out chan string, kill chan struct{}) {
+func link_bc_out(chat_in chan block_chain.Block, chat_out chan string, kill chan struct{}) {
 	for {
 		if bc == nil {
-			fmt.Println("Ive been dooped!")
 			break
 		}
 		select {
 		case l := <-chat_in:
-			s := ""
-			for i := l.Front(); i != nil; i = i.Next() {
-				s += i.Value.(block_chain.Block).AsString()
-				fmt.Println(s)
-			}
+			s := l.AsString()
 			chat_out <- s
 		case <-kill:
 			return
@@ -168,6 +163,7 @@ func link_bc_out(chat_in chan list.List, chat_out chan string, kill chan struct{
 
 func Run() {
 	scrn := screen{}
+
 	scrn.key_out = make(chan rune)
 
 	scrn.chat_out = make(chan string)
@@ -193,10 +189,24 @@ func Run() {
 				"!invite":              {" - give your page's credentails to a publisher who wants to join", invite},
 				"!invite_qr":           {" - give your page's credentails to a publisher who wants to join via a QR code", invite_qr},
 				"!read_credentials_qr": {" - read the credentials from a publisher who wants to join via a QR code", read_credentials_qr},
+				"!clear":               {" - clear all output on the screen and reprint the Bock Chain", struct{}{}},
 				"!exit":                {" - exit this page", action_not_yet_supported},
 			}},
 		0}
 
+	erase_below_chat := func() {
+		chat_lines := strings.Count(scrn.chat_store, "\n")
+		//move the cursor to (0, chat_line+1)
+		fmt.Printf("\033[%d;0H", chat_lines+1)
+		other_lines := strings.Count(scrn.menu_store, "\n")
+		for i := 0; i < other_lines+1; i += 1 {
+			fmt.Print("\033[K")  // erase to end of line
+			fmt.Print("\033[1B") // move cursor down 1
+		}
+		//move the cursor to (0, chat_line+1)
+		fmt.Printf("\033[%d;0H", chat_lines+1)
+	}
+	fmt.Print("\033[H\033[2J")
 	go keyboard(scrn.key_out)
 	go menu(&scrn.menu, &scrn.menu_stuff, scrn.chat_out)
 	scrn.menu.in <- "\n"
@@ -205,20 +215,25 @@ func Run() {
 		case s := <-scrn.key_out:
 			scrn.key_store += string(s)
 			if s == '\n' {
-				scrn.menu.in <- scrn.key_store
-				scrn.key_store = ""
+				if scrn.key_store == "!clear\n" {
+					fmt.Print("\033[H\033[2J")
+					fmt.Print(scrn.chat_store)
+					scrn.menu_store = ""
+					scrn.key_store = ""
+				} else {
+					scrn.menu.in <- scrn.key_store
+					scrn.key_store = ""
+				}
 			}
 		case s := <-scrn.menu.out:
+			erase_below_chat()
 			scrn.menu_store = s
-			// clear the screen
-			fmt.Print("\033[H\033[2J")
-			fmt.Print(scrn.chat_store)
 			fmt.Print(scrn.menu_store)
 			fmt.Print(scrn.key_store)
 		case s := <-scrn.chat_out:
-			scrn.chat_store = s
-			fmt.Print("\033[H\033[2J")
-			fmt.Print(scrn.chat_store)
+			erase_below_chat()
+			scrn.chat_store += s
+			fmt.Print(s)
 			fmt.Print(scrn.menu_store)
 			fmt.Print(scrn.key_store)
 		}
@@ -246,7 +261,7 @@ func genesis(args []string) (*block_chain.BlockChain, string) {
 }
 
 func text_to_qr_text(s string) string {
-	q, err := qrcode.New(s, qrcode.Low)
+	q, err := qrcode.New(s, qrcode.Medium)
 	if err != nil {
 		return "Error making qr code\n"
 	}
@@ -380,7 +395,7 @@ func invite(bc *block_chain.BlockChain, msg []string) string {
 
 func invite_qr(bc *block_chain.BlockChain, msg []string) string {
 	s := invite(bc, msg)
-	return text_to_qr_text(s)
+	return text_to_qr_text(strings.Split(s, "\n")[1])
 }
 
 func read_qr() (string, error) {
@@ -449,7 +464,6 @@ func read_credentials_qr(out chan string) {
 		for c := range creds {
 			out <- creds[c]
 		}
-		out <- "!invite_qr\n"
 	}
 }
 
