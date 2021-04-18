@@ -40,7 +40,7 @@ type BlockChain struct {
 	chain_err chan error
 
 	asyncOut bool
-	ChainOut chan list.List
+	ChainOut chan Block
 
 	publishers map[[PuzzleSize]byte]string
 	admins     *set.Set
@@ -62,7 +62,7 @@ func New(self self, asyncOut bool) *BlockChain {
 	bc.chain_err = make(chan error)
 
 	bc.asyncOut = asyncOut
-	bc.ChainOut = make(chan list.List, 1) //SyncValueNew(bc.chain)
+	bc.ChainOut = make(chan Block, 1)
 
 	getValidSol(&bc.publish_sol)
 	getValidSol(&bc.admin_sol)
@@ -110,7 +110,7 @@ func (bc *BlockChain) AddBlock(b Block) error {
 		bc.p2p.publishBlock(b)
 	}
 	if bc.asyncOut == true {
-		bc.ChainOut <- bc.chain
+		bc.ChainOut <- b
 	}
 	return nil
 }

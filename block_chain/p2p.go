@@ -133,12 +133,12 @@ func (bc *BlockChain) readLoop() {
 						for i := 1; i < len(d); i += 1 {
 							b, err = UnmarshalBlock(d[i])
 							if err != nil {
-								panic(err)
+								fmt.Println("Could not Unmarshal block from message: ", err)
 								break
 							}
 							err := bc.AddBlock(b)
 							if err != nil {
-								panic(err)
+								fmt.Println("invalid block that is supposed to be valid: ", b.AsString())
 							}
 						}
 					}
