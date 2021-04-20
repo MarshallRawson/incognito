@@ -2,21 +2,14 @@ package cli
 
 import (
 	"bufio"
-	"bytes"
 	"container/list"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"image/jpeg"
 	"os"
 	"strings"
 
-	"github.com/blackjack/webcam"
-
 	"github.com/MarshallRawson/incognito/block_chain"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/liyue201/goqr"
-	qrcode "github.com/skip2/go-qrcode"
 )
 
 type interactive_region struct {
@@ -260,14 +253,6 @@ func genesis(args []string) (*block_chain.BlockChain, string) {
 	return bc, ""
 }
 
-func text_to_qr_text(s string) string {
-	q, err := qrcode.New(s, qrcode.Medium)
-	if err != nil {
-		return "Error making qr code\n"
-	}
-	return q.ToString(false)
-}
-
 func give_credentials(args []string) (*block_chain.BlockChain, string) {
 	if len(args) != 1 {
 		return nil, "exactly 1 arg required: name\n"
@@ -396,62 +381,6 @@ func invite(bc *block_chain.BlockChain, msg []string) string {
 func invite_qr(bc *block_chain.BlockChain, msg []string) string {
 	s := invite(bc, msg)
 	return text_to_qr_text(strings.Split(s, "\n")[1])
-}
-
-func read_qr() (string, error) {
-	cam, err := webcam.Open("/dev/video0")
-	if err != nil {
-		return "", errors.New("could not open webcam")
-	}
-	formats := cam.GetSupportedFormats()
-	for k, y := range formats {
-		fmt.Println(k, y)
-	}
-	// Motoion-JPEG format
-	p, w, h, err := cam.SetImageFormat(1196444237, 1280, 720)
-	fmt.Println("Camera: ", p, w, h, err)
-	if err != nil {
-		return "", err
-	}
-	err = cam.SetBufferCount(1)
-	if err != nil {
-		return "", err
-	}
-	err = cam.StartStreaming()
-	if err != nil {
-		return "", errors.New("had problem with the webcam\n")
-	}
-	ret := ""
-	for {
-		err := cam.WaitForFrame(1)
-		switch err.(type) {
-		case nil:
-		case *webcam.Timeout:
-			fmt.Printf(err.Error())
-			continue
-		default:
-			return "", err
-		}
-		frame, err := cam.ReadFrame()
-		if len(frame) != 0 {
-			// Process frame
-			img, err := jpeg.Decode(bytes.NewReader(frame))
-			if err != nil {
-				continue
-			}
-			fmt.Println("attempting to recognize")
-			qrCodes, err := goqr.Recognize(img)
-			if err != nil {
-				continue
-			}
-			ret = string(qrCodes[0].Payload)
-			break
-		} else if err != nil {
-			continue
-		}
-	}
-	cam.Close()
-	return ret, nil
 }
 
 func read_credentials_qr(out chan string) {
