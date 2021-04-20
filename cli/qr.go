@@ -1,10 +1,14 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"image/jpeg"
+	"io/ioutil"
+	"os"
+	"os/exec"
 	"runtime"
 
 	"github.com/blackjack/webcam"
@@ -21,11 +25,42 @@ func text_to_qr_text(s string) string {
 }
 
 func read_qr() (string, error) {
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
 		return read_qr_linux()
-	} else {
+	case "android":
+		return read_qr_android()
+	default:
 		return "", errors.New(runtime.GOOS + " is not yet supported")
 	}
+}
+
+func read_qr_android() (string, error) {
+	ret := ""
+	for {
+		photo, err := ioutil.TempFile("tmp", "incognito*.jpeg")
+		if err != nil {
+			return "", err
+		}
+		cmd := exec.Command("termux-camera-photo " + photo.Name())
+		err = cmd.Run()
+		if err != nil {
+			return "", err
+		}
+		img, err := jpeg.Decode(bufio.NewReader(photo))
+		if err != nil {
+			continue
+		}
+		fmt.Println("attempting to recognize")
+		qrCodes, err := goqr.Recognize(img)
+		if err != nil {
+			continue
+		}
+		ret = string(qrCodes[0].Payload)
+		os.Remove(photo.Name())
+		break
+	}
+	return ret, nil
 }
 
 func read_qr_linux() (string, error) {
