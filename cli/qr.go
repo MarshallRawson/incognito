@@ -38,7 +38,7 @@ func read_qr() (string, error) {
 func read_qr_android() (string, error) {
 	ret := ""
 	for {
-		photo, err := ioutil.TempFile("tmp", "incognito*.jpeg")
+		photo, err := ioutil.TempFile("incognito", "*.jpeg")
 		if err != nil {
 			return "", err
 		}
