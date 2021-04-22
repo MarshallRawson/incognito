@@ -2,14 +2,15 @@ package block_chain
 
 import (
 	"crypto/rand"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"testing"
+
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 // Testing the block chain
 func TestBlockChain(t *testing.T) {
 	// Alice constructs her block chain
-	bc := New(MakeSelf("alice"))
+	bc := New(MakeSelf("alice"), false)
 	// Alice makes her own block chain
 	err := bc.Genesis("Alice's page")
 	if err != nil {
@@ -23,7 +24,7 @@ func TestBlockChain(t *testing.T) {
 	}
 
 	// Alice meets a person named bob
-	bob_chain := New(MakeSelf("bob"))
+	bob_chain := New(MakeSelf("bob"), false)
 
 	// Alice acquires a publisher puzzle from Bob, which bob knows how to solve, but Alice does not
 	bob_puzzle := bob_chain.SharePubPuzzle()

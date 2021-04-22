@@ -5,6 +5,7 @@ go 1.15
 require (
 	fyne.io/fyne v1.4.3 // indirect
 	fyne.io/fyne/v2 v2.0.0 // indirect
+	github.com/blackjack/webcam v0.0.0-20200313125108-10ed912a8539 // indirect
 	github.com/dtylman/gowd v0.0.0-20190619113956-15e38debca22
 	github.com/go-gl/glfw v0.0.0-20201108214237-06ea97f0c265 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20201108214237-06ea97f0c265 // indirect
@@ -12,7 +13,9 @@ require (
 	github.com/libp2p/go-libp2p v0.13.0
 	github.com/libp2p/go-libp2p-core v0.8.0
 	github.com/libp2p/go-libp2p-pubsub v0.4.1
+	github.com/liyue201/goqr v0.0.0-20200803022322-df443203d4ea // indirect
 	github.com/multiformats/go-multiaddr v0.3.1 // indirect
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e // indirect
 	github.com/srwiley/oksvg v0.0.0-20210209000435-a757b9cbd472 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/webview/webview v0.0.0-20210216142346-e0bfdf0e5d90
